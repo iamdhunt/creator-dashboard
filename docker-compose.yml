@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: creator_db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: creator_dashboard
+    volumes:
+      - postgres_data:/var/lib/postgresql/postgres_data
+
+volumes:
+  postgres_data:

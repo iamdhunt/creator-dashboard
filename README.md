@@ -1,87 +1,118 @@
-# Welcome to React Router!
+# Creator Dashboard
 
-A modern, production-ready template for building full-stack React applications using React Router.
+The Creator Dashboard is a full-stack analytics platform that helps creators track their performance and engagement across multiple social networks.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+Designed as a real-world portfolio project, it highlights core developer skills including authentication, CRUD operations, API integration, state management, and data visualization — built on a clean, scalable architecture.
 
-## Features
+## Core Features (Planned & In Progress)
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+### User Authentication
 
-## Getting Started
+- Signup & login
+- Session handling
+- Protected routes
+- Role-based permissions (Creator / Admin)
 
-### Installation
+### Creator Stats Dashboard
 
-Install the dependencies:
+- Central hub for creator performance
+- Customizable panels for metrics such as:
+  - Followers
+  - Views
+  - Engagement rate
+  - Audience growth
+  - Revenue / sales (for creators who sell merch/music)
 
-```bash
-npm install
-```
+### API Integrations
 
-### Development
+Pull in real creator stats from supported platforms:
 
-Start the development server with HMR:
+- YouTube Data API (subs, views, watch time)
+- Instagram Graph API (followers, engagement)
+- Spotify for Artists API (streams, listeners)
 
-```bash
-npm run dev
-```
+_(Integrations can be swapped or expanded over time.)_
 
-Your application will be available at `http://localhost:5173`.
+### Data Visualizations
 
-## Building for Production
+- Line charts for growth over time
+- Bar and pie charts for engagement breakdowns
+- Sparkline-style microcharts for quick glances
+- Trend indicators (up/down %)
 
-Create a production build:
+### CRUD Operations
 
-```bash
-npm run build
-```
+Admin or creators can manage:
 
-## Deployment
+- Accounts
+- Connected platforms
+- Saved analytics snapshots
+- Notes, tasks, or custom metadata
 
-### Docker Deployment
+### Admin Mode
 
-To build and run using Docker:
+A dedicated admin interface with:
 
-```bash
-docker build -t my-app .
+- User management
+- System logs
+- Manual data overrides
+- API key monitoring
 
-# Run the container
-docker run -p 3000:3000 my-app
-```
+## Tech Stack
 
-The containerized application can be deployed to any platform that supports Docker, including:
+### Frontend
 
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
+- React 18
+- React Router 7
+- TypeScript
+- Tailwind CSS
 
-### DIY Deployment
+### Backend / Server Layer
 
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
+- Node.js
+- Drizzle ORM
+- PostgreSQL
+- API service modules
 
-Make sure to deploy the output of `npm run build`
+### Roadmap
 
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
+**v0.1 — Base Architecture**
 
-## Styling
+- Routing
+- UI shell
+- Drizzle + DB connection
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+**v0.2 — Auth System**
 
----
+- Signup, login
+- Protected dashboard routes
 
-Built with ❤️ using React Router.
+**v0.3 — Creator Dashboard MVP**
+
+- Example metrics
+- Basic charts (static or mock data)
+
+**v0.4 — API Integrations**
+
+- First external API (YouTube or Spotify)
+- Real stats pulling
+
+**v0.5 — Admin Mode**
+
+- Manage users
+- CRUD for creator records
+
+**v1.0 — Production Release**
+
+- Full multi-platform analytics
+- Polished UI
+- Performance & error handling
+
+## License
+
+MIT — free for personal use.  
+Give credit if you fork something substantial.
+
+## Credits
+
+Built by Dario Hunt
