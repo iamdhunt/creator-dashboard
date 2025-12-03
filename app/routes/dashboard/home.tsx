@@ -14,7 +14,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.id, parseInt(userId)))
+    .where(eq(users.id, userId))
     .limit(1);
 
   return { user };

@@ -108,6 +108,10 @@ A dedicated admin interface with:
 - Polished UI
 - Performance & error handling
 
+## Future Improvements
+
+- Agency accounts
+
 ## License
 
 MIT — free for personal use.  

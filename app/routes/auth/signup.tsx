@@ -1,24 +1,38 @@
 import { Form, Link, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/signup";
 import { signup } from "~/services/auth.server";
+import { signupSchema } from "~/services/validation";
+import { z } from "zod";
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
-  const email = formData.get("email");
-  const password = formData.get("password");
+  const data = Object.fromEntries(formData);
 
-  if (typeof email !== "string" || !email.includes("@")) {
-    return { error: "Invalid email address" };
+  const result = signupSchema.safeParse(data);
+
+  if (!result.success) {
+    const flattened = z.flattenError(result.error);
+
+    return {
+      fieldErrors: flattened.fieldErrors,
+      fields: data,
+    };
   }
 
-  if (typeof password !== "string" || password.length < 6) {
-    return { error: "Password must be at least 6 characters long" };
-  }
+  const { email, password } = result.data;
 
   try {
     return await signup(email, password);
   } catch (error) {
     if (error instanceof Error) {
+      if (error.message === "User already exists") {
+        return {
+          fieldErrors: {
+            email: ["This email is already registered"],
+          },
+          fields: data,
+        };
+      }
       return { error: error.message };
     }
     return { error: "Something went wrong" };
@@ -59,10 +73,20 @@ export default function Signup() {
                 name="email"
                 type="email"
                 autoComplete="email"
+                defaultValue={actionData?.fields?.email as string}
                 required
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none sm:text-sm ${
+                  actionData?.fieldErrors?.email
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                }`}
               />
             </div>
+            {actionData?.fieldErrors?.email && (
+              <p className="mt-2 text-sm text-red-600">
+                {actionData.fieldErrors.email[0]}
+              </p>
+            )}
           </div>
 
           <div>
@@ -79,9 +103,18 @@ export default function Signup() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none sm:text-sm ${
+                  actionData?.fieldErrors?.password
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                }`}
               />
             </div>
+            {actionData?.fieldErrors?.password && (
+              <p className="mt-2 text-sm text-red-600">
+                {actionData.fieldErrors.password[0]}
+              </p>
+            )}
           </div>
 
           <button
