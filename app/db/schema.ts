@@ -1,11 +1,11 @@
 import {
   pgTable,
-  serial,
   text,
   timestamp,
   integer,
   uuid,
   real,
+  date,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -47,6 +47,21 @@ export const posts = pgTable("posts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const analyticsHistory = pgTable("history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  accountId: uuid("account_id")
+    .references(() => accounts.id)
+    .notNull(),
+  date: date("date").notNull(),
+  followerCount: integer("follower_count").default(0),
+  followersGained: integer("followers_gained").default(0),
+  impressionCount: integer("impression_count").default(0),
+  impressionsGained: integer("impressions_gained").default(0),
+  engagementRate: real("engagement_rate").default(0),
+  engagementRateChange: real("engagement_rate_change").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
 }));
@@ -57,6 +72,7 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
     references: [users.id],
   }),
   posts: many(posts),
+  analyticsHistory: many(analyticsHistory),
 }));
 
 export const postsRelations = relations(posts, ({ one }) => ({
@@ -65,3 +81,13 @@ export const postsRelations = relations(posts, ({ one }) => ({
     references: [accounts.id],
   }),
 }));
+
+export const analyticsHistoryRelations = relations(
+  analyticsHistory,
+  ({ one }) => ({
+    account: one(accounts, {
+      fields: [analyticsHistory.accountId],
+      references: [accounts.id],
+    }),
+  })
+);

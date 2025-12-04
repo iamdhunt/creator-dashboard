@@ -8,6 +8,13 @@
       "when": 1764740716906,
       "tag": "0000_safe_captain_cross",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1764743359211,
+      "tag": "0001_misty_inhumans",
+      "breakpoints": true
     }
   ]
 }

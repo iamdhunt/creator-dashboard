@@ -110,7 +110,11 @@ A dedicated admin interface with:
 
 ## Future Improvements
 
+- Notifications and alerts
 - Agency accounts
+- E-commerce stats
+- Creator comparisons
+- Post tracking
 
 ## License
 

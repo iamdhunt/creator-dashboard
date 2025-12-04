@@ -1,14 +1,8 @@
 import { createCookieSessionStorage, redirect } from "react-router";
 import bcrypt from "bcryptjs";
-import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
-import pg from "pg";
 import { users } from "~/db/schema";
-
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-const db = drizzle(pool);
+import { db } from "~/db/db.server";
 
 const storage = createCookieSessionStorage({
   cookie: {
