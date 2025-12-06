@@ -1,10 +1,14 @@
-import { Form, useNavigation } from "react-router";
+import { Form, useNavigation, useActionData } from "react-router";
 import type { Route } from "./+types/settings";
 import { requireUserId } from "~/services/auth.server";
 import { db } from "~/db/db.server";
 import { accounts } from "~/db/schema";
 import { eq, and } from "drizzle-orm";
 import { success } from "zod";
+import { logout } from "~/services/auth.server";
+import { users } from "~/db/schema";
+import bcrypt from "bcryptjs";
+import { updateProfileSchema } from "~/services/validation";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const userId = await requireUserId(request);
@@ -13,7 +17,13 @@ export async function loader({ request }: Route.LoaderArgs) {
     where: eq(accounts.userId, userId),
   });
 
-  return { accounts: userAccounts };
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return { accounts: userAccounts, user };
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -45,17 +55,89 @@ export async function action({ request }: Route.ActionArgs) {
       .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)));
   }
 
+  if (intent === "delete-user") {
+    await db.delete(users).where(eq(users.id, userId));
+
+    return logout(request);
+  }
+
+  if (intent === "update-profile") {
+    const data = Object.fromEntries(formData);
+
+    const result = updateProfileSchema.safeParse(data);
+
+    if (!result.success) {
+      const error = result.error.issues[0].message;
+      return { error };
+    }
+
+    const { currentPassword, newEmail, newPassword } = result.data;
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) return { error: "User not found" };
+
+    const isCorrectPassword = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash
+    );
+    if (!isCorrectPassword) {
+      return { error: "Current password is incorrect" };
+    }
+
+    const updates: { email?: string; passwordHash?: string } = {};
+
+    if (newEmail && newEmail !== user.email) {
+      const [existing] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, newEmail))
+        .limit(1);
+
+      if (existing) return { error: "Email is already in use" };
+      updates.email = newEmail;
+    }
+
+    if (newPassword) {
+      updates.passwordHash = await bcrypt.hash(newPassword, 10);
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await db.update(users).set(updates).where(eq(users.id, userId));
+    }
+
+    return { success: true };
+  }
+
   return { success: true };
 }
 
 export default function Settings({ loaderData }: Route.ComponentProps) {
-  const { accounts } = loaderData;
+  const { accounts, user } = loaderData;
   const navigation = useNavigation();
+  const actionData = useActionData<typeof action>();
   const isSubmitting = navigation.state === "submitting";
 
   return (
     <div className="max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
+
+      {actionData?.success && (
+        <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded relative">
+          <span className="block sm:inline">Profile updated successfully.</span>
+        </div>
+      )}
+
+      {actionData?.error && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
+          <span className="block sm:inline">{actionData.error}</span>
+        </div>
+      )}
+
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <h2 className="text-lg font-medium mb-4">Connected Accounts</h2>
         {accounts.length === 0 ? (
@@ -89,7 +171,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
           </ul>
         )}
       </div>
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
         <h2 className="text-lg font-medium mb-4">Connect New Account</h2>
         <Form method="post" className="space-y-4">
           <input type="hidden" name="intent" value="connect" />
@@ -135,6 +217,98 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
             className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? "Connecting..." : "Connect Account"}
+          </button>
+        </Form>
+      </div>
+
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-medium mb-4">Update Profile</h2>
+        <Form method="post" className="space-y-4">
+          <input type="hidden" name="intent" value="update-profile" />
+
+          <div>
+            <label
+              htmlFor="newEmail"
+              className="block text-sm font-medium text-gray-700"
+            >
+              New Email Address
+            </label>
+            <input
+              type="email"
+              name="newEmail"
+              id="newEmail"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+              placeholder={user.email}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="newPassword"
+              className="block text-sm font-medium text-gray-700"
+            >
+              New Password
+            </label>
+            <input
+              type="password"
+              name="newPassword"
+              id="newPassword"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+              placeholder="Leave blank to keep current"
+            />
+          </div>
+
+          <div className="pt-4 border-t border-gray-100">
+            <label
+              htmlFor="currentPassword"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Current Password <span className="text-red-500">*</span>
+            </label>
+            <p className="text-xs text-gray-500 mb-2">
+              Required to save changes
+            </p>
+            <input
+              type="password"
+              name="currentPassword"
+              id="currentPassword"
+              required
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 cursor-pointer"
+          >
+            {isSubmitting ? "Saving..." : "Save Changes"}
+          </button>
+        </Form>
+      </div>
+
+      <div className="mt-10 bg-red-50 border border-red-200 rounded-lg p-6">
+        <h2 className="text-lg font-medium mb-4 text-red-700">Danger Zone</h2>
+        <p className="text-sm text-red-600 mb-4">
+          Once you delete your account, there is no going back. Please be
+          certain.
+        </p>
+        <Form method="post">
+          <input type="hidden" name="intent" value="delete-user" />
+          <button
+            type="submit"
+            className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 cursor-pointer"
+            onClick={(e) => {
+              if (
+                !confirm(
+                  "Are you sure you want to delete your account? This action can't be reversed."
+                )
+              ) {
+                e.preventDefault();
+              }
+            }}
+          >
+            Delete My Account
           </button>
         </Form>
       </div>

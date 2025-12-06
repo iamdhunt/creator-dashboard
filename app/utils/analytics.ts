@@ -13,7 +13,7 @@ interface HistoryEntry {
 }
 
 export interface MultiLineChartData {
-  date: any;
+  date: string;
   value: number;
   delta: number;
   [accountId: string]: number | string;

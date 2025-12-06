@@ -13,6 +13,10 @@ import { processChartData } from "~/utils/analytics";
 export async function loader({ request }: Route.LoaderArgs) {
   const userId = await requireUserId(request);
 
+  const url = new URL(request.url);
+  const daysParam = url.searchParams.get("days");
+  const days = daysParam ? parseInt(daysParam) : 30;
+
   const userWithAccounts = await db.query.users.findFirst({
     where: eq(users.id, userId),
     with: {
@@ -29,6 +33,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   }
 
   const accounts = userWithAccounts.accounts;
+  const allHistory = accounts.flatMap((acc) => acc.analyticsHistory);
 
   const totalFollowers = accounts.reduce(
     (sum, acc) => sum + (acc.followers || 0),
@@ -44,10 +49,14 @@ export async function loader({ request }: Route.LoaderArgs) {
         accounts.length
       : 0;
 
-  const allHistory = accounts.flatMap((acc) => acc.analyticsHistory);
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
 
-  const charts = processChartData(allHistory, accounts);
+  const filteredHistory = allHistory.filter((entry) => {
+    return new Date(entry.date) >= cutoffDate;
+  });
 
+  const charts = processChartData(filteredHistory, accounts);
   return {
     user: userWithAccounts,
     accounts,
@@ -58,6 +67,7 @@ export async function loader({ request }: Route.LoaderArgs) {
       accountCount: accounts.length,
     },
     charts,
+    days,
   };
 }
 
@@ -80,7 +90,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function DashboardHome({ loaderData }: Route.ComponentProps) {
-  const { user, stats, charts, accounts } = loaderData;
+  const { user, stats, charts, accounts, days } = loaderData;
   const navigation = useNavigation();
   const isRefreshing =
     navigation.state === "submitting" &&
@@ -89,27 +99,48 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
   return (
     <div className="space-y-6">
       <header>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Welcome back!</h1>
-          <p className="mt-2 text-gray-600">
-            You are logged in as{" "}
-            <span className="font-semibold">{user.email}</span>
-          </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Welcome back!</h1>
+            <p className="mt-2 text-gray-600">
+              You are logged in as{" "}
+              <span className="font-semibold">{user.email}</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            {stats.accountCount > 0 && (
+              <div className="flex items-center space-x-1 bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
+                {[7, 30, 90].map((d) => (
+                  <Link
+                    key={d}
+                    to={`?days=${d}`}
+                    preventScrollReset
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                      days === d
+                        ? "bg-indigo-100 text-indigo-700"
+                        : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {d}D
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+          {stats.accountCount > 0 && (
+            <Form method="post">
+              <button
+                type="submit"
+                name="intent"
+                value="refresh"
+                disabled={isRefreshing}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 cursor-pointer"
+              >
+                {isRefreshing ? "Refreshing..." : "Refresh Stats"}
+              </button>
+            </Form>
+          )}
         </div>
-
-        {stats.accountCount > 0 && (
-          <Form method="post">
-            <button
-              type="submit"
-              name="intent"
-              value="refresh"
-              disabled={isRefreshing}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 cursor-pointer"
-            >
-              {isRefreshing ? "Refreshing..." : "Refresh Stats"}
-            </button>
-          </Form>
-        )}
       </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">

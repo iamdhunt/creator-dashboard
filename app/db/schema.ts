@@ -19,7 +19,7 @@ export const users = pgTable("users", {
 export const accounts = pgTable("accounts", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
-    .references(() => users.id)
+    .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
   platform: text("platform").notNull(),
   platformAccountId: text("platform_account_id").notNull(),
@@ -35,7 +35,7 @@ export const accounts = pgTable("accounts", {
 export const posts = pgTable("posts", {
   id: uuid("id").defaultRandom().primaryKey(),
   accountId: uuid("account_id")
-    .references(() => accounts.id)
+    .references(() => accounts.id, { onDelete: "cascade" })
     .notNull(),
   platformPostId: text("platform_post_id").notNull(),
   title: text("title"),
@@ -50,7 +50,7 @@ export const posts = pgTable("posts", {
 export const analyticsHistory = pgTable("history", {
   id: uuid("id").defaultRandom().primaryKey(),
   accountId: uuid("account_id")
-    .references(() => accounts.id)
+    .references(() => accounts.id, { onDelete: "cascade" })
     .notNull(),
   date: date("date").notNull(),
   followerCount: integer("follower_count").default(0),
@@ -62,8 +62,19 @@ export const analyticsHistory = pgTable("history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
+  passwordResetTokens: many(passwordResetTokens),
 }));
 
 export const accountsRelations = relations(accounts, ({ one, many }) => ({
@@ -88,6 +99,16 @@ export const analyticsHistoryRelations = relations(
     account: one(accounts, {
       fields: [analyticsHistory.accountId],
       references: [accounts.id],
+    }),
+  })
+);
+
+export const passwordResetTokensRelations = relations(
+  passwordResetTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [passwordResetTokens.userId],
+      references: [users.id],
     }),
   })
 );

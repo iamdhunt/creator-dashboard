@@ -123,8 +123,8 @@ export function GrowthChart({
               dataKey="value"
               stroke={color}
               strokeWidth={3}
-              dot={{ r: 4, fill: color, strokeWidth: 2, stroke: "#fff" }}
-              activeDot={{ r: 6, strokeWidth: 0 }}
+              dot={{ r: 6, fill: color, strokeWidth: 2, stroke: "#fff" }}
+              activeDot={{ r: 8, strokeWidth: 0 }}
             />
 
             {accounts.map((acc) => (
@@ -134,8 +134,13 @@ export function GrowthChart({
                 dataKey={acc.id}
                 name={`@${acc.username} (${acc.platform})`}
                 stroke={getPlatformColor(acc.platform)}
-                strokeWidth={2}
-                dot={false}
+                strokeWidth={1}
+                dot={{
+                  r: 3,
+                  fill: getPlatformColor(acc.platform),
+                  strokeWidth: 1,
+                  stroke: "#fff",
+                }}
                 strokeDasharray="5 5"
                 activeDot={{ r: 4 }}
               />
