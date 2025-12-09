@@ -6,6 +6,7 @@ import {
   uuid,
   real,
   date,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -25,6 +26,7 @@ export const accounts = pgTable("accounts", {
   platformAccountId: text("platform_account_id").notNull(),
   username: text("username").notNull(),
   accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
   followers: integer("followers").default(0),
   totalViews: integer("total_views").default(0),
   engagementRate: real("engagement_rate").default(0),
@@ -47,20 +49,26 @@ export const posts = pgTable("posts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const analyticsHistory = pgTable("history", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  accountId: uuid("account_id")
-    .references(() => accounts.id, { onDelete: "cascade" })
-    .notNull(),
-  date: date("date").notNull(),
-  followerCount: integer("follower_count").default(0),
-  followersGained: integer("followers_gained").default(0),
-  impressionCount: integer("impression_count").default(0),
-  impressionsGained: integer("impressions_gained").default(0),
-  engagementRate: real("engagement_rate").default(0),
-  engagementRateChange: real("engagement_rate_change").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const analyticsHistory = pgTable(
+  "history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    accountId: uuid("account_id")
+      .references(() => accounts.id, { onDelete: "cascade" })
+      .notNull(),
+    date: date("date").notNull(),
+    followerCount: integer("follower_count").default(0),
+    followersGained: integer("followers_gained").default(0),
+    impressionCount: integer("impression_count").default(0),
+    impressionsGained: integer("impressions_gained").default(0),
+    engagementRate: real("engagement_rate").default(0),
+    engagementRateChange: real("engagement_rate_change").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    unq: unique().on(t.accountId, t.date),
+  })
+);
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: uuid("id").defaultRandom().primaryKey(),

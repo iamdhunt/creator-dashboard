@@ -8,6 +8,7 @@ export default [
     route("signup", "routes/auth/signup.tsx"),
     route("forgot-password", "routes/auth/forgot-password.tsx"),
     route("reset-password", "routes/auth/reset-password.tsx"),
+    route("/auth/google/callback", "routes/auth/google/callback.tsx"),
   ]),
 
   route("dashboard", "routes/dashboard/layout.tsx", [

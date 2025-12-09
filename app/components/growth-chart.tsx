@@ -12,58 +12,41 @@ import { getPlatformColor } from "~/constants/colors";
 
 export interface ChartDataPoint {
   date: string;
-  value: number;
-  delta: number;
+  [key: string]: any;
 }
 
-interface AccountInfo {
-  id: string;
-  platform: string;
-  username: string;
+interface LineConfig {
+  key: string;
+  color: string;
+  name: string;
 }
 
 interface GrowthChartProps {
-  data: MultiLineChartData[];
   title: string;
-  color?: string;
+  data: ChartDataPoint[];
+  lines: LineConfig[];
   unit?: string;
-  accounts?: AccountInfo[];
 }
 
 const CustomTooltip = ({ active, payload, label, unit = "" }: any) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    const isPositive = data.delta > 0;
-    const isZero = data.delta === 0;
-
     return (
       <div className="bg-white p-3 border border-gray-100 shadow-lg rounded-lg">
         <p className="text-sm text-gray-500 mb-2">
           {new Date(label).toLocaleDateString()}
         </p>
-        <p className="text-sm font-bold text-indigo-600">
-          {data.value.toLocaleString()}
-          {unit}
-        </p>
-        <p
-          className={`text-xs font-medium ${isPositive ? "text-green-600" : isZero ? "text-gray-600" : "text-red-600"}`}
-        >
-          {isPositive ? "+" : ""}
-          {data.delta.toLocaleString()}
-          {unit}
-        </p>
-
-        {payload.slice(1).map((entry: any) => (
-          <p
-            key={entry.name}
-            className="text-xs text-gray-600 flex justify-between gap-4"
-          >
-            <span style={{ color: entry.color }}>{entry.name}</span>
-            <span>
+        {payload.map((entry: any) => (
+          <div key={entry.name} className="flex items-center gap-2 mb-1">
+            <div
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-xs text-gray-600">{entry.name}:</span>
+            <span className="text-sm font-bold text-gray-900">
               {entry.value.toLocaleString()}
               {unit}
             </span>
-          </p>
+          </div>
         ))}
       </div>
     );
@@ -72,11 +55,10 @@ const CustomTooltip = ({ active, payload, label, unit = "" }: any) => {
 };
 
 export function GrowthChart({
-  data,
   title,
-  color = "#4f46e5",
+  data,
+  lines,
   unit = "",
-  accounts = [],
 }: GrowthChartProps) {
   if (data.length === 0) {
     return (
@@ -99,50 +81,35 @@ export function GrowthChart({
             />
             <XAxis
               dataKey="date"
-              tickFormatter={(str) =>
-                new Date(str).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                })
-              }
-              stroke="#9ca3af"
-              fontSize={12}
-              tickLine={false}
               axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#6b7280", fontSize: 12 }}
+              tickFormatter={(str) => {
+                const date = new Date(str);
+                return `${date.getMonth() + 1}/${date.getDate()}`;
+              }}
+              minTickGap={30}
             />
             <YAxis
-              stroke="#9ca3af"
-              fontSize={12}
-              tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => `${value.toLocaleString()}${unit}`}
+              tickLine={false}
+              tick={{ fill: "#6b7280", fontSize: 12 }}
+              tickFormatter={(value) =>
+                value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value
+              }
+              width={40}
             />
             <Tooltip content={<CustomTooltip unit={unit} />} />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke={color}
-              strokeWidth={3}
-              dot={{ r: 6, fill: color, strokeWidth: 2, stroke: "#fff" }}
-              activeDot={{ r: 8, strokeWidth: 0 }}
-            />
-
-            {accounts.map((acc) => (
+            {lines.map((line) => (
               <Line
-                key={acc.id}
+                key={line.key}
                 type="monotone"
-                dataKey={acc.id}
-                name={`@${acc.username} (${acc.platform})`}
-                stroke={getPlatformColor(acc.platform)}
-                strokeWidth={1}
-                dot={{
-                  r: 3,
-                  fill: getPlatformColor(acc.platform),
-                  strokeWidth: 1,
-                  stroke: "#fff",
-                }}
-                strokeDasharray="5 5"
-                activeDot={{ r: 4 }}
+                dataKey={line.key}
+                stroke={line.color}
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4, strokeWidth: 0 }}
+                name={line.name}
               />
             ))}
           </LineChart>

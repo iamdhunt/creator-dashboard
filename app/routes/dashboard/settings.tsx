@@ -1,14 +1,14 @@
-import { Form, useNavigation, useActionData } from "react-router";
+import { Form, useNavigation, useActionData, redirect } from "react-router";
 import type { Route } from "./+types/settings";
 import { requireUserId } from "~/services/auth.server";
 import { db } from "~/db/db.server";
 import { accounts } from "~/db/schema";
 import { eq, and } from "drizzle-orm";
-import { success } from "zod";
 import { logout } from "~/services/auth.server";
 import { users } from "~/db/schema";
 import bcrypt from "bcryptjs";
 import { updateProfileSchema } from "~/services/validation";
+import { generateAuthUrl, revokeToken } from "~/services/youtube.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const userId = await requireUserId(request);
@@ -50,9 +50,24 @@ export async function action({ request }: Route.ActionArgs) {
     const accountId = formData.get("accountId");
     if (typeof accountId !== "string") return { error: "Invalid account ID" };
 
-    await db
-      .delete(accounts)
-      .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)));
+    const [account] = await db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
+      .limit(1);
+
+    if (account) {
+      if (account.platform === "youtube" && account.accessToken) {
+        await revokeToken(account.accessToken);
+      }
+
+      await db.delete(accounts).where(eq(accounts.id, accountId));
+    }
+  }
+
+  if (intent === "init-youtube") {
+    const url = generateAuthUrl();
+    return redirect(url);
   }
 
   if (intent === "delete-user") {
@@ -173,6 +188,24 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
       </div>
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <h2 className="text-lg font-medium mb-4">Connect New Account</h2>
+        <Form method="post">
+          <input type="hidden" name="intent" value="init-youtube" />
+          <button
+            type="submit"
+            className="flex w-full items-center justify-center gap-3 rounded-md bg-[#FF0000] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#D90000] focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-[#FF0000] cursor-pointer"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+            </svg>
+            Connect YouTube
+          </button>
+        </Form>
+
         <Form method="post" className="space-y-4">
           <input type="hidden" name="intent" value="connect" />
 

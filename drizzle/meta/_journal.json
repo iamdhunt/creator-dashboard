@@ -36,6 +36,20 @@
       "when": 1764983298968,
       "tag": "0004_daffy_the_initiative",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1765061693434,
+      "tag": "0005_parallel_giant_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1765242374595,
+      "tag": "0006_fuzzy_mysterio",
+      "breakpoints": true
     }
   ]
 }

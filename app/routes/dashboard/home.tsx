@@ -1,10 +1,13 @@
-import { Link, Form, useNavigation } from "react-router";
+import { Link, Form, useNavigation, useSearchParams } from "react-router";
 import type { Route } from "./+types/home";
 import { requireUserId } from "~/services/auth.server";
 import { eq } from "drizzle-orm";
 import { accounts, users } from "~/db/schema";
 import { db } from "~/db/db.server";
-import { refreshAccountStats } from "~/services/analytics.server";
+import {
+  refreshAccountStats,
+  getAggregateAnalytics,
+} from "~/services/analytics.server";
 import { GrowthChart } from "~/components/growth-chart";
 
 import type { ChartDataPoint } from "~/components/growth-chart";
@@ -17,57 +20,30 @@ export async function loader({ request }: Route.LoaderArgs) {
   const daysParam = url.searchParams.get("days");
   const days = daysParam ? parseInt(daysParam) : 30;
 
-  const userWithAccounts = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-    with: {
-      accounts: {
-        with: {
-          analyticsHistory: true,
-        },
-      },
-    },
-  });
+  const userAccounts = await db
+    .select()
+    .from(accounts)
+    .where(eq(accounts.userId, userId));
 
-  if (!userWithAccounts) {
-    throw new Response("User not found", { status: 404 });
-  }
+  const history = await getAggregateAnalytics(userId, days);
 
-  const accounts = userWithAccounts.accounts;
-  const allHistory = accounts.flatMap((acc) => acc.analyticsHistory);
+  const latest = history[history.length - 1] || { followers: 0, views: 0 };
 
-  const totalFollowers = accounts.reduce(
-    (sum, acc) => sum + (acc.followers || 0),
-    0
-  );
-  const totalViews = accounts.reduce(
-    (sum, acc) => sum + (acc.totalViews || 0),
-    0
-  );
-  const avgEngagement =
-    accounts.length > 0
-      ? accounts.reduce((sum, acc) => sum + (acc.engagementRate || 0), 0) /
-        accounts.length
-      : 0;
+  const stats = {
+    totalFollowers: latest.followers,
+    totalViews: latest.views,
+    avgEngagement: 0,
+    accountCount: userAccounts.length,
+  };
 
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
-
-  const filteredHistory = allHistory.filter((entry) => {
-    return new Date(entry.date) >= cutoffDate;
-  });
-
-  const charts = processChartData(filteredHistory, accounts);
   return {
-    user: userWithAccounts,
-    accounts,
-    stats: {
-      totalFollowers,
-      totalViews,
-      avgEngagement,
-      accountCount: accounts.length,
+    stats,
+    charts: {
+      followers: history,
+      views: history,
     },
-    charts,
     days,
+    accounts: userAccounts,
   };
 }
 
@@ -90,7 +66,8 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function DashboardHome({ loaderData }: Route.ComponentProps) {
-  const { user, stats, charts, accounts, days } = loaderData;
+  const { stats, charts, accounts, days } = loaderData;
+  const [searchParams] = useSearchParams();
   const navigation = useNavigation();
   const isRefreshing =
     navigation.state === "submitting" &&
@@ -102,10 +79,6 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Welcome back!</h1>
-            <p className="mt-2 text-gray-600">
-              You are logged in as{" "}
-              <span className="font-semibold">{user.email}</span>
-            </p>
           </div>
           <div className="flex items-center gap-4">
             {stats.accountCount > 0 && (
@@ -170,21 +143,14 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
           <GrowthChart
             title="Follower Growth"
             data={charts.followers}
-            color="#4f46e5"
-            accounts={accounts}
+            lines={[
+              { key: "followers", color: "#4f46e5", name: "Total Followers" },
+            ]}
           />
           <GrowthChart
-            title="Total Impressions"
-            data={charts.impressions}
-            color="#0ea5e9"
-            accounts={accounts}
-          />
-          <GrowthChart
-            title="Avg. Engagement Rate"
-            data={charts.engagement}
-            color="#ec4899"
-            unit="%"
-            accounts={accounts}
+            title="Total Impressions/Views"
+            data={charts.views}
+            lines={[{ key: "views", color: "#10b981", name: "Total Views" }]}
           />
         </div>
       )}

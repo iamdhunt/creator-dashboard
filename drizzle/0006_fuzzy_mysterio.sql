@@ -1,0 +1,1 @@
+ALTER TABLE "history" ADD CONSTRAINT "history_account_id_date_unique" UNIQUE("account_id","date");
