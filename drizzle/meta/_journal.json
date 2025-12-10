@@ -50,6 +50,20 @@
       "when": 1765242374595,
       "tag": "0006_fuzzy_mysterio",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1765329693777,
+      "tag": "0007_lying_adam_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1765350217912,
+      "tag": "0008_mean_maggott",
+      "breakpoints": true
     }
   ]
 }

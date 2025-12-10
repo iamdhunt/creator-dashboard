@@ -30,6 +30,7 @@ export const accounts = pgTable("accounts", {
   followers: integer("followers").default(0),
   totalViews: integer("total_views").default(0),
   engagementRate: real("engagement_rate").default(0),
+  totalPosts: integer("total_posts").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -61,6 +62,9 @@ export const analyticsHistory = pgTable(
     followersGained: integer("followers_gained").default(0),
     impressionCount: integer("impression_count").default(0),
     impressionsGained: integer("impressions_gained").default(0),
+    likes: integer("likes").default(0),
+    comments: integer("comments").default(0),
+    shares: integer("shares").default(0),
     engagementRate: real("engagement_rate").default(0),
     engagementRateChange: real("engagement_rate_change").default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),

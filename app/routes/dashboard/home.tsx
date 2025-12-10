@@ -26,21 +26,42 @@ export async function loader({ request }: Route.LoaderArgs) {
     .where(eq(accounts.userId, userId));
 
   const history = await getAggregateAnalytics(userId, days);
+  const chartHistory = history.slice(0, -3); // Remove last 3 days to avoid partial data
 
-  const latest = history[history.length - 1] || { followers: 0, views: 0 };
+  const validHistory = chartHistory.filter(
+    (day) => day.followers > 0 || day.views > 0
+  );
+
+  const latest = validHistory[validHistory.length - 1] || {
+    followers: 0,
+    views: 0,
+  };
+
+  const activeDays = chartHistory.filter((day) => day.dailyViews > 0);
+  const totalEngagementRate = chartHistory.reduce(
+    (sum, day) => sum + (day.engagementRate || 0),
+    0
+  );
+  const avgEngagement =
+    activeDays.length > 0 ? totalEngagementRate / activeDays.length : 0;
+
+  const totalPosts = userAccounts.reduce(
+    (sum, acc) => sum + (acc.totalPosts || 0),
+    0
+  );
 
   const stats = {
     totalFollowers: latest.followers,
     totalViews: latest.views,
-    avgEngagement: 0,
+    avgEngagement,
+    totalPosts,
     accountCount: userAccounts.length,
   };
 
   return {
     stats,
     charts: {
-      followers: history,
-      views: history,
+      history: chartHistory,
     },
     days,
     accounts: userAccounts,
@@ -116,7 +137,7 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         {/* Placeholder Stats Cards */}
         <div className="rounded-lg bg-white p-6 shadow">
           <h3 className="text-sm font-medium text-gray-500">Total Followers</h3>
@@ -136,21 +157,55 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
             {stats.totalViews.toLocaleString()}
           </p>
         </div>
+        <div className="rounded-lg bg-white p-6 shadow">
+          <h3 className="text-sm font-medium text-gray-500">Total Posts</h3>
+          <p className="mt-2 text-3xl font-bold text-gray-900">
+            {stats.totalPosts.toLocaleString()}
+          </p>
+        </div>
       </div>
 
       {stats.accountCount > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <GrowthChart
-            title="Follower Growth"
-            data={charts.followers}
+            title="Followers/Subscribers"
+            data={charts.history}
             lines={[
-              { key: "followers", color: "#4f46e5", name: "Total Followers" },
+              {
+                key: "followersGained",
+                color: "#4f46e5",
+                name: "Total Followers",
+              },
             ]}
           />
           <GrowthChart
-            title="Total Impressions/Views"
-            data={charts.views}
-            lines={[{ key: "views", color: "#10b981", name: "Total Views" }]}
+            title="Impressions/Views"
+            data={charts.history}
+            lines={[
+              { key: "dailyViews", color: "#10b981", name: "Total Views" },
+            ]}
+          />
+          <GrowthChart
+            title="Avg. Engagement Rate"
+            data={charts.history}
+            lines={[
+              {
+                key: "engagementRate",
+                color: "#f59e0b",
+                name: "Engagement Rate (%)",
+              },
+            ]}
+          />
+          <GrowthChart
+            title="Daily Interactions"
+            data={charts.history}
+            lines={[
+              {
+                key: "interactions",
+                color: "#ec4899",
+                name: "Likes, Comments & Shares",
+              },
+            ]}
           />
         </div>
       )}

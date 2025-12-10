@@ -53,7 +53,7 @@ export async function getChannelInfo(accessToken: string) {
 
   if (!response.ok) {
     if (response.status === 401) {
-      throw new Error("unauthorized");
+      throw new Error("Unauthorized");
     }
     throw new Error("Failed to fetch channel info from YouTube API");
   }
@@ -68,7 +68,8 @@ export async function getChannelAnalytics(
   startDate: string,
   endDate: string
 ) {
-  const metrics = "views,subscribersGained,subscribersLost";
+  const metrics =
+    "views,subscribersGained,subscribersLost,likes,comments,shares";
   const dimensions = "day";
   const sort = "day";
 

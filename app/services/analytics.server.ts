@@ -9,6 +9,35 @@ import {
 
 const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
+async function ensureValidToken(account: typeof accounts.$inferSelect) {
+  let accessToken = account.accessToken;
+
+  if (!accessToken) throw new Error("No access token available");
+
+  try {
+    await getChannelInfo(accessToken);
+    return accessToken;
+  } catch (error: any) {
+    if (error.message === "Unauthorized" && account.refreshToken) {
+      console.log("🔄 Token expired. Refreshing...");
+      try {
+        const newTokens = await refreshAccessToken(account.refreshToken);
+        if (newTokens.access_token) {
+          await db
+            .update(accounts)
+            .set({ accessToken: newTokens.access_token })
+            .where(eq(accounts.id, account.id));
+          return newTokens.access_token;
+        }
+      } catch (refreshError) {
+        console.error("Failed to refresh token:", refreshError);
+        throw refreshError;
+      }
+    }
+    throw error;
+  }
+}
+
 export async function refreshAccountStats(accountId: string) {
   const [account] = await db
     .select()
@@ -18,77 +47,82 @@ export async function refreshAccountStats(accountId: string) {
 
   if (!account) throw new Error("Account not found");
 
-  const currentFollowers = account.followers || 0;
-  const currentViews = account.totalViews || 0;
-  const currentEngagement = account.engagementRate || 0;
+  const accessToken = await ensureValidToken(account);
 
-  const newFollowers = currentFollowers + Math.floor(Math.random() * 50) + 1;
-  const newViews = currentViews + Math.floor(Math.random() * 500) + 100;
+  const channelInfo = await getChannelInfo(accessToken);
+  const totalPosts = parseInt(channelInfo.statistics.videoCount);
 
-  const engagementChange = Math.random() - 0.5;
-  const newEngagement = Math.max(0, currentEngagement + engagementChange);
+  const history = await getAccountAnalytics(
+    accountId,
+    account.platform,
+    30,
+    true
+  );
 
-  await db
-    .update(accounts)
-    .set({
-      followers: newFollowers,
-      totalViews: newViews,
-      engagementRate: newEngagement,
-      updatedAt: new Date(),
-    })
-    .where(eq(accounts.id, accountId));
+  const latest = history[history.length - 1];
 
-  const today = new Date().toISOString().split("T")[0];
+  if (latest) {
+    await db
+      .update(accounts)
+      .set({
+        followers: latest.followers,
+        totalViews: latest.views,
+        engagementRate: latest.engagementRate,
+        totalPosts: totalPosts,
+        updatedAt: new Date(),
+      })
+      .where(eq(accounts.id, accountId));
 
-  await db.insert(analyticsHistory).values({
-    accountId: accountId,
-    date: today,
-    followerCount: newFollowers,
-    followersGained: newFollowers - currentFollowers,
-    impressionCount: newViews,
-    impressionsGained: newViews - currentViews,
-    engagementRate: newEngagement,
-    engagementRateChange: newEngagement - currentEngagement,
-  });
+    return {
+      followers: latest.followers,
+      views: latest.views,
+      engagement: latest.engagementRate,
+      totalPosts,
+    };
+  }
 
-  return {
-    followers: newFollowers,
-    views: newViews,
-    engagement: newEngagement,
-  };
+  return { followers: 0, views: 0, engagement: 0 };
 }
 
 export async function getAccountAnalytics(
   accountId: string,
   platform: string,
-  days: number
+  days: number,
+  forceRefresh: boolean = false
 ) {
   const endDate = new Date();
   const startDate = new Date();
   startDate.setDate(endDate.getDate() - days);
 
-  const cachedData = await db
-    .select()
-    .from(analyticsHistory)
-    .where(
-      and(
-        eq(analyticsHistory.accountId, accountId),
-        gte(analyticsHistory.date, formatDate(startDate)),
-        lte(analyticsHistory.date, formatDate(endDate))
+  if (!forceRefresh) {
+    const cachedData = await db
+      .select()
+      .from(analyticsHistory)
+      .where(
+        and(
+          eq(analyticsHistory.accountId, accountId),
+          gte(analyticsHistory.date, formatDate(startDate)),
+          lte(analyticsHistory.date, formatDate(endDate))
+        )
       )
-    )
-    .orderBy(desc(analyticsHistory.date));
+      .orderBy(desc(analyticsHistory.date));
 
-  if (cachedData.length >= days - 2) {
-    console.log("✅ Serving from Cache");
-    return cachedData
-      .map((row) => ({
-        date: row.date,
-        views: row.impressionCount,
-        followers: row.followerCount,
-        followersGained: row.followersGained,
-      }))
-      .reverse();
+    if (cachedData.length >= days - 2) {
+      console.log("✅ Serving from Cache");
+      return cachedData
+        .map((row) => ({
+          date: row.date,
+          views: row.impressionCount,
+          dailyViews: row.impressionsGained,
+          followers: row.followerCount,
+          followersGained: row.followersGained,
+          likes: row.likes,
+          comments: row.comments,
+          shares: row.shares,
+          engagementRate: row.engagementRate,
+        }))
+        .reverse();
+    }
   }
 
   const [account] = await db
@@ -104,32 +138,14 @@ export async function getAccountAnalytics(
     account.accessToken &&
     account.platformAccountId
   ) {
-    let accessToken = account.accessToken;
+    let accessToken: string;
 
     // Try refreshing token if invalid
     try {
-      await getChannelInfo(accessToken);
-    } catch (error: any) {
-      if (error.message === "Unauthorized" && account.refreshToken) {
-        console.log("🔄 Token expired. Refreshing...");
-        try {
-          const newTokens = await refreshAccessToken(account.refreshToken);
-          if (newTokens.access_token) {
-            accessToken = newTokens.access_token;
-
-            await db
-              .update(accounts)
-              .set({ accessToken: newTokens.access_token })
-              .where(eq(accounts.id, accountId));
-          }
-        } catch (refreshError) {
-          console.error("Failed to refresh token:", refreshError);
-          return [];
-        }
-      } else {
-        console.error("API Error:", error);
-        return [];
-      }
+      accessToken = await ensureValidToken(account);
+    } catch (error) {
+      console.error("failed to validate token:", error);
+      return [];
     }
 
     try {
@@ -139,7 +155,7 @@ export async function getAccountAnalytics(
       let currentTotalViews = parseInt(channelInfo.statistics.viewCount);
 
       const rows = await getChannelAnalytics(
-        account.accessToken,
+        accessToken,
         account.platformAccountId,
         formatDate(startDate),
         formatDate(endDate)
@@ -151,16 +167,28 @@ export async function getAccountAnalytics(
       const reversedRows = [...rows].reverse();
 
       for (const row of reversedRows) {
-        // row: [date, views, subscribersGained, subscribersLost]
+        // row: [date, views, subsGained, subsLost, likes, comments, shares]
         const dateStr = row[0];
         const dailyViews = row[1];
         const netSubs = row[2] - row[3];
+        const likes = row[4] || 0;
+        const comments = row[5] || 0;
+        const shares = row[6] || 0;
+
+        // Calculate engagement rate (likes + comments + shares) / views
+        const engagementRate =
+          dailyViews > 0 ? ((likes + comments + shares) / dailyViews) * 100 : 0;
 
         history.push({
           date: dateStr,
           views: currentTotalViews,
+          dailyViews: dailyViews,
           followers: currentTotalSubs,
           followersGained: netSubs,
+          likes,
+          comments,
+          shares,
+          engagementRate,
         });
 
         await db
@@ -172,6 +200,10 @@ export async function getAccountAnalytics(
             followersGained: netSubs,
             impressionCount: currentTotalViews,
             impressionsGained: dailyViews,
+            likes,
+            comments,
+            shares,
+            engagementRate,
           })
           .onConflictDoUpdate({
             target: [analyticsHistory.accountId, analyticsHistory.date],
@@ -180,6 +212,10 @@ export async function getAccountAnalytics(
               followersGained: netSubs,
               impressionCount: currentTotalViews,
               impressionsGained: dailyViews,
+              likes,
+              comments,
+              shares,
+              engagementRate,
             },
           });
 
@@ -210,7 +246,13 @@ export async function getAggregateAnalytics(userId: string, days: number = 30) {
   // Aggregate data by date
   const dateMap = new Map<
     string,
-    { views: number; followers: number; followersGained: number }
+    {
+      views: number;
+      followers: number;
+      followersGained: number;
+      interactions: number;
+      dailyViews: number;
+    }
   >();
 
   // Initialize map with empty dates (to ensure no gaps)
@@ -219,7 +261,13 @@ export async function getAggregateAnalytics(userId: string, days: number = 30) {
 
     d.setDate(d.getDate() - (days - 1 - i));
     const dateStr = formatDate(d);
-    dateMap.set(dateStr, { views: 0, followers: 0, followersGained: 0 });
+    dateMap.set(dateStr, {
+      views: 0,
+      followers: 0,
+      followersGained: 0,
+      interactions: 0,
+      dailyViews: 0,
+    });
   }
 
   // Sum up the data
@@ -232,154 +280,29 @@ export async function getAggregateAnalytics(userId: string, days: number = 30) {
         current.views += entry.views || 0;
         current.followers += entry.followers || 0;
         current.followersGained += entry.followersGained || 0;
+
+        const entryInteractions =
+          (entry.likes || 0) + (entry.comments || 0) + (entry.shares || 0);
+
+        current.interactions += entryInteractions;
+        current.dailyViews += entry.dailyViews || 0;
       }
     }
   }
 
   // Convert map back to array for chart component
-  return Array.from(dateMap.entries()).map(([date, stats]) => ({
-    date,
-    ...stats,
-  }));
-}
+  return Array.from(dateMap.entries()).map(([date, stats]) => {
+    const engagementRate =
+      stats.dailyViews > 0 ? (stats.interactions / stats.dailyViews) * 100 : 0;
 
-export async function getAnalyticsHistory(userId: string, days: number = 30) {
-  const [youtubeAccount] = await db
-    .select()
-    .from(accounts)
-    .where(and(eq(accounts.userId, userId), eq(accounts.platform, "youtube")))
-    .limit(1);
-
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(endDate.getDate() - days);
-
-  // fetch database cache first
-  if (youtubeAccount) {
-    const cachedData = await db
-      .select()
-      .from(analyticsHistory)
-      .where(
-        and(
-          eq(analyticsHistory.accountId, youtubeAccount.id),
-          gte(analyticsHistory.date, formatDate(startDate)),
-          lte(analyticsHistory.date, formatDate(endDate))
-        )
-      )
-      .orderBy(desc(analyticsHistory.date));
-
-    if (cachedData.length >= days - 2) {
-      console.log("✅ Serving from Cache");
-      return cachedData
-        .map((row) => ({
-          date: row.date,
-          views: row.impressionCount,
-          followers: row.followerCount,
-          followersGained: row.followersGained,
-          likes: 0,
-          comments: 0,
-        }))
-        .reverse();
-    }
-  }
-
-  //check that YouTube is connected
-  if (
-    youtubeAccount &&
-    youtubeAccount.accessToken &&
-    youtubeAccount.platformAccountId
-  ) {
-    try {
-      console.log("🌍 Fetching from YouTube API...");
-      const channelInfo = await getChannelInfo(youtubeAccount.accessToken);
-      let currentTotalSubs = parseInt(channelInfo.statistics.subscriberCount);
-      let currentTotalViews = parseInt(channelInfo.statistics.viewCount);
-
-      const rows = await getChannelAnalytics(
-        youtubeAccount.accessToken,
-        youtubeAccount.platformAccountId,
-        formatDate(startDate),
-        formatDate(endDate)
-      );
-
-      const history = [];
-
-      // reverse the rows to process from newest to oldest
-      const reversedRows = [...rows].reverse();
-
-      for (const row of reversedRows) {
-        // row: [date, views, subscribersGained, subscribersLost]
-        const dateStr = row[0];
-        const dailyViews = row[1];
-        const netSubs = row[2] - row[3];
-
-        const dayStats = {
-          date: dateStr,
-          views: currentTotalViews,
-          followers: currentTotalSubs,
-          followersGained: netSubs,
-          likes: 0,
-          comments: 0,
-        };
-
-        history.push(dayStats);
-
-        await db
-          .insert(analyticsHistory)
-          .values({
-            accountId: youtubeAccount.id,
-            date: dateStr,
-            followerCount: currentTotalSubs,
-            followersGained: netSubs,
-            impressionCount: currentTotalViews,
-            impressionsGained: dailyViews,
-          })
-          .onConflictDoUpdate({
-            target: [analyticsHistory.accountId, analyticsHistory.date],
-            set: {
-              followerCount: currentTotalSubs,
-              followersGained: netSubs,
-              impressionCount: currentTotalViews,
-              impressionsGained: dailyViews,
-            },
-          });
-
-        currentTotalViews -= dailyViews;
-        currentTotalSubs -= netSubs;
-      }
-
-      return history.reverse();
-    } catch (error) {
-      console.error(
-        "Failed to fetch real YouTube stats, falling back to mock:",
-        error
-      );
-    }
-  }
-
-  const data = [];
-  let currentFollowers = 1000;
-  let currentViews = 5000;
-
-  for (let i = 0; i < days; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() - (days - 1 - i));
-
-    const dailyFollowers = Math.floor(Math.random() * 10) + 1;
-    const dailyViews = Math.floor(Math.random() * 100) + 50;
-
-    currentFollowers += dailyFollowers;
-    currentViews += dailyViews;
-
-    data.push({
-      date: formatDate(date),
-      followers: currentFollowers,
-      followersGained: dailyFollowers,
-      views: currentViews, // Cumulative views
-      likes: Math.floor(dailyViews * 0.1),
-      comments: Math.floor(dailyViews * 0.01),
-    });
-  }
-
-  return data;
+    return {
+      date,
+      views: stats.views,
+      followers: stats.followers,
+      followersGained: stats.followersGained,
+      dailyViews: stats.dailyViews,
+      engagementRate,
+      interactions: stats.interactions,
+    };
+  });
 }
