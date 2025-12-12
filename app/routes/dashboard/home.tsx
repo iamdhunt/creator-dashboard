@@ -10,9 +10,6 @@ import {
 } from "~/services/analytics.server";
 import { GrowthChart } from "~/components/growth-chart";
 
-import type { ChartDataPoint } from "~/components/growth-chart";
-import { processChartData } from "~/utils/analytics";
-
 export async function loader({ request }: Route.LoaderArgs) {
   const userId = await requireUserId(request);
 
@@ -26,7 +23,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     .where(eq(accounts.userId, userId));
 
   const history = await getAggregateAnalytics(userId, days);
-  const chartHistory = history.slice(0, -3); // Remove last 3 days to avoid partial data
+  const chartHistory = history.slice(0, -2); // Remove last 2 days to avoid partial data
 
   const validHistory = chartHistory.filter(
     (day) => day.followers > 0 || day.views > 0
@@ -174,7 +171,7 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
               {
                 key: "followersGained",
                 color: "#4f46e5",
-                name: "Total Followers",
+                name: "Followers/Subs",
               },
             ]}
           />
@@ -182,7 +179,11 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
             title="Impressions/Views"
             data={charts.history}
             lines={[
-              { key: "dailyViews", color: "#10b981", name: "Total Views" },
+              {
+                key: "dailyViews",
+                color: "#10b981",
+                name: "Impressions/Views",
+              },
             ]}
           />
           <GrowthChart
@@ -192,12 +193,12 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
               {
                 key: "engagementRate",
                 color: "#f59e0b",
-                name: "Engagement Rate (%)",
+                name: "Avg. Engagement Rate (%)",
               },
             ]}
           />
           <GrowthChart
-            title="Daily Interactions"
+            title="Interactions (Likes, Comments & Shares)"
             data={charts.history}
             lines={[
               {

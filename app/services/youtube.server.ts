@@ -62,6 +62,42 @@ export async function getChannelInfo(accessToken: string) {
   return data.items?.[0]; // Returns the first channel found
 }
 
+export async function getChannelOverview(
+  accessToken: string,
+  channelId: string,
+  startDate: string,
+  endDate: string
+) {
+  const metrics =
+    "estimatedMinutesWatched,averageViewDuration,averageViewPercentage,views,subscribersGained,subscribersLost";
+  const dimensions = "";
+
+  const url = new URL("https://youtubeanalytics.googleapis.com/v2/reports");
+  url.searchParams.append("ids", `channel==${channelId}`);
+  url.searchParams.append("startDate", startDate);
+  url.searchParams.append("endDate", endDate);
+  url.searchParams.append("metrics", metrics);
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) return null;
+
+  const data = await response.json();
+  const row = data.rows?.[0];
+
+  if (!row) return null;
+
+  return {
+    watchTimeHours: (row[0] || 0) / 60,
+    avgViewDuration: row[1] || 0,
+    avgViewPercentage: row[2] || 0,
+    views: row[3] || 0,
+    netSubscribers: (row[4] || 0) - (row[5] || 0),
+  };
+}
+
 export async function getChannelAnalytics(
   accessToken: string,
   channelId: string,
@@ -69,7 +105,7 @@ export async function getChannelAnalytics(
   endDate: string
 ) {
   const metrics =
-    "views,subscribersGained,subscribersLost,likes,comments,shares";
+    "views,subscribersGained,subscribersLost,likes,comments,shares,estimatedMinutesWatched,averageViewDuration";
   const dimensions = "day";
   const sort = "day";
 
@@ -96,5 +132,193 @@ export async function getChannelAnalytics(
 
   const data = await response.json();
 
+  return data.rows || [];
+}
+
+export async function getTopVideos(
+  accessToken: string,
+  channelId: string,
+  startDate: string,
+  endDate: string
+) {
+  const metrics =
+    "views,likes,comments,shares,averageViewPercentage,subscribersGained,averageViewDuration";
+  const dimensions = "video";
+  const sort = "-views";
+  const maxResults = "10";
+
+  const url = new URL("https://youtubeanalytics.googleapis.com/v2/reports");
+  url.searchParams.append("ids", `channel==${channelId}`);
+  url.searchParams.append("startDate", startDate);
+  url.searchParams.append("endDate", endDate);
+  url.searchParams.append("metrics", metrics);
+  url.searchParams.append("dimensions", dimensions);
+  url.searchParams.append("sort", sort);
+  url.searchParams.append("maxResults", maxResults);
+
+  const response = await fetch(url.toString(), {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("YouTube Top Videos API Error:", errorText);
+    return [];
+  }
+
+  const data = await response.json();
+  return data.rows || [];
+}
+
+export async function getTopSubscriberVideos(
+  accessToken: string,
+  channelId: string,
+  startDate: string,
+  endDate: string
+) {
+  const metrics =
+    "views,subscribersGained,subscribersLost,averageViewPercentage";
+  const dimensions = "video";
+  const sort = "-subscribersGained";
+  const maxResults = "10";
+
+  const url = new URL("https://youtubeanalytics.googleapis.com/v2/reports");
+  url.searchParams.append("ids", `channel==${channelId}`);
+  url.searchParams.append("startDate", startDate);
+  url.searchParams.append("endDate", endDate);
+  url.searchParams.append("metrics", metrics);
+  url.searchParams.append("dimensions", dimensions);
+  url.searchParams.append("sort", sort);
+  url.searchParams.append("maxResults", maxResults);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("YouTube Top Subscriber Videos API Error:", errorText);
+    return [];
+  }
+
+  const data = await response.json();
+  return data.rows || [];
+}
+
+export async function getDemographics(
+  accessToken: string,
+  channelId: string,
+  startDate: string,
+  endDate: string
+) {
+  const metrics = "viewerPercentage";
+  const dimensions = "ageGroup,gender";
+  const sort = "gender,ageGroup";
+
+  const url = new URL("https://youtubeanalytics.googleapis.com/v2/reports");
+  url.searchParams.append("ids", `channel==${channelId}`);
+  url.searchParams.append("startDate", startDate);
+  url.searchParams.append("endDate", endDate);
+  url.searchParams.append("metrics", metrics);
+  url.searchParams.append("dimensions", dimensions);
+  url.searchParams.append("sort", sort);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    if (response.status === 403 || response.status === 400) {
+      console.warn("Demographics data not available (privacy threshold)");
+      return [];
+    }
+    return [];
+  }
+
+  const data = await response.json();
+  return data.rows || [];
+}
+
+export async function getTrafficSources(
+  accessToken: string,
+  channelId: string,
+  startDate: string,
+  endDate: string
+) {
+  const metrics = "views";
+  const dimensions = "insightTrafficSourceType";
+  const sort = "-views";
+
+  const url = new URL("https://youtubeanalytics.googleapis.com/v2/reports");
+  url.searchParams.append("ids", `channel==${channelId}`);
+  url.searchParams.append("startDate", startDate);
+  url.searchParams.append("endDate", endDate);
+  url.searchParams.append("metrics", metrics);
+  url.searchParams.append("dimensions", dimensions);
+  url.searchParams.append("sort", sort);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) return [];
+
+  const data = await response.json();
+  return data.rows || [];
+}
+
+export async function getVideoDetails(accessToken: string, videoIds: string[]) {
+  if (videoIds.length === 0) return {};
+
+  const url = new URL("https://www.googleapis.com/youtube/v3/videos");
+  url.searchParams.append("part", "snippet,statistics");
+  url.searchParams.append("id", videoIds.join(","));
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) return {};
+
+  const data = await response.json();
+
+  const videoMap: Record<string, any> = {};
+  data.items.forEach((item: any) => {
+    videoMap[item.id] = {
+      title: item.snippet.title,
+      thumbnail: item.snippet.thumbnails.medium.url,
+      publishedAt: item.snippet.publishedAt,
+    };
+  });
+  return videoMap;
+}
+
+export async function getTopCountries(
+  accessToken: string,
+  channelId: string,
+  startDate: string,
+  endDate: string
+) {
+  const metrics = "views";
+  const dimensions = "country";
+  const sort = "-views";
+  const maxResults = "5";
+
+  const url = new URL("https://youtubeanalytics.googleapis.com/v2/reports");
+  url.searchParams.append("ids", `channel==${channelId}`);
+  url.searchParams.append("startDate", startDate);
+  url.searchParams.append("endDate", endDate);
+  url.searchParams.append("metrics", metrics);
+  url.searchParams.append("dimensions", dimensions);
+  url.searchParams.append("sort", sort);
+  url.searchParams.append("maxResults", maxResults);
+
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) return [];
+
+  const data = await response.json();
   return data.rows || [];
 }

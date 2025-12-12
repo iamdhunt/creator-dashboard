@@ -15,5 +15,6 @@ export default [
     index("routes/dashboard/home.tsx"),
     route("content", "routes/dashboard/content.tsx"),
     route("settings", "routes/dashboard/settings.tsx"),
+    route("youtube", "routes/dashboard/youtube.tsx"),
   ]),
 ] satisfies RouteConfig;

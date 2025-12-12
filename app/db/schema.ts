@@ -65,8 +65,10 @@ export const analyticsHistory = pgTable(
     likes: integer("likes").default(0),
     comments: integer("comments").default(0),
     shares: integer("shares").default(0),
+    totalInteractions: integer("total_interactions").default(0),
     engagementRate: real("engagement_rate").default(0),
     engagementRateChange: real("engagement_rate_change").default(0),
+    watchMinutes: integer("watch_minutes").default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({

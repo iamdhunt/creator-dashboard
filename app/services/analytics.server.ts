@@ -5,7 +5,16 @@ import {
   getChannelAnalytics,
   getChannelInfo,
   refreshAccessToken,
+  getTopVideos,
+  getDemographics,
+  getTrafficSources,
+  getVideoDetails,
+  getChannelOverview,
+  getTopCountries,
+  getTopSubscriberVideos,
 } from "./youtube.server";
+import { subscribe } from "diagnostics_channel";
+import { get } from "http";
 
 const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
@@ -119,7 +128,9 @@ export async function getAccountAnalytics(
           likes: row.likes,
           comments: row.comments,
           shares: row.shares,
+          interactions: row.totalInteractions,
           engagementRate: row.engagementRate,
+          watchTimeHours: (row.watchMinutes || 0) / 60,
         }))
         .reverse();
     }
@@ -167,17 +178,27 @@ export async function getAccountAnalytics(
       const reversedRows = [...rows].reverse();
 
       for (const row of reversedRows) {
-        // row: [date, views, subsGained, subsLost, likes, comments, shares]
+        // row: [date, views, subsGained, subsLost, likes, comments, shares, estimatedMinutesWatched, averageViewDuration]
         const dateStr = row[0];
-        const dailyViews = row[1];
+        const dailyViews = Math.max(0, row[1]);
         const netSubs = row[2] - row[3];
-        const likes = row[4] || 0;
-        const comments = row[5] || 0;
-        const shares = row[6] || 0;
+        const likes = Math.max(0, row[4] || 0);
+        const comments = Math.max(0, row[5] || 0);
+        const shares = Math.max(0, row[6] || 0);
+        const estimatedMinutesWatched = Math.max(0, row[7] || 0);
+        const avgViewDurationSeconds = Math.max(0, row[8] || 0);
+
+        // Fallback: estimate minutes
+        const watchMinutes =
+          estimatedMinutesWatched > 0
+            ? estimatedMinutesWatched
+            : Math.round((avgViewDurationSeconds * dailyViews) / 60);
 
         // Calculate engagement rate (likes + comments + shares) / views
         const engagementRate =
           dailyViews > 0 ? ((likes + comments + shares) / dailyViews) * 100 : 0;
+
+        const interactions = likes + comments + shares;
 
         history.push({
           date: dateStr,
@@ -189,6 +210,8 @@ export async function getAccountAnalytics(
           comments,
           shares,
           engagementRate,
+          watchTimeHours: watchMinutes / 60,
+          interactions,
         });
 
         await db
@@ -203,7 +226,9 @@ export async function getAccountAnalytics(
             likes,
             comments,
             shares,
+            totalInteractions: interactions,
             engagementRate,
+            watchMinutes,
           })
           .onConflictDoUpdate({
             target: [analyticsHistory.accountId, analyticsHistory.date],
@@ -215,7 +240,9 @@ export async function getAccountAnalytics(
               likes,
               comments,
               shares,
+              totalInteractions: interactions,
               engagementRate,
+              watchMinutes,
             },
           });
 
@@ -282,7 +309,9 @@ export async function getAggregateAnalytics(userId: string, days: number = 30) {
         current.followersGained += entry.followersGained || 0;
 
         const entryInteractions =
-          (entry.likes || 0) + (entry.comments || 0) + (entry.shares || 0);
+          Math.max(0, entry.likes || 0) +
+          Math.max(0, entry.comments || 0) +
+          Math.max(0, entry.shares || 0);
 
         current.interactions += entryInteractions;
         current.dailyViews += entry.dailyViews || 0;
@@ -305,4 +334,130 @@ export async function getAggregateAnalytics(userId: string, days: number = 30) {
       interactions: stats.interactions,
     };
   });
+}
+
+export async function getYoutubeDashboardData(
+  accountId: string,
+  days: number = 30
+) {
+  const [account] = await db
+    .select()
+    .from(accounts)
+    .where(eq(accounts.id, accountId))
+    .limit(1);
+
+  if (!account || account.platform !== "youtube") {
+    throw new Error("YouTube account not found");
+  }
+
+  const accessToken = await ensureValidToken(account);
+
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - days);
+
+  const startStr = formatDate(startDate);
+  const endStr = formatDate(endDate);
+
+  const channelInfo = await getChannelInfo(accessToken);
+
+  const [
+    topVideosRaw,
+    topSubVideosRaw,
+    demographicsRaw,
+    trafficRaw,
+    countriesRaw,
+    overview,
+  ] = await Promise.all([
+    getTopVideos(accessToken, account.platformAccountId!, startStr, endStr),
+    getTopSubscriberVideos(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr
+    ),
+    getDemographics(accessToken, account.platformAccountId!, startStr, endStr),
+    getTrafficSources(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr
+    ),
+    getTopCountries(accessToken, account.platformAccountId!, startStr, endStr),
+    getChannelOverview(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr
+    ),
+  ]);
+
+  const allVideoIds = new Set([
+    ...topVideosRaw.map((r: any) => r[0]),
+    ...topSubVideosRaw.map((r: any) => r[0]),
+  ]);
+  const videoDetails = await getVideoDetails(
+    accessToken,
+    Array.from(allVideoIds)
+  );
+
+  const topVideos = topVideosRaw.map((row: any) => ({
+    id: row[0],
+    title: videoDetails[row[0]]?.title || "Unknown Video",
+    thumbnail: videoDetails[row[0]]?.thumbnail || "",
+    views: row[1],
+    likes: row[2],
+    comments: row[3],
+    shares: row[4],
+    avgViewPercentage: row[5],
+    subscribersGained: row[6],
+    avgDuration: row[7],
+  }));
+
+  const topSubscriberVideos = topSubVideosRaw.map((row: any) => ({
+    id: row[0],
+    title: videoDetails[row[0]]?.title || "Unknown Video",
+    thumbnail: videoDetails[row[0]]?.thumbnail || "",
+    views: row[1],
+    subscribersGained: row[2],
+    subscribersLost: row[3],
+    avgViewPercentage: row[4],
+  }));
+
+  const demographics = demographicsRaw.map((row: any) => ({
+    age: row[0],
+    gender: row[1],
+    percentage: row[2],
+  }));
+
+  const trafficSources = trafficRaw.map((row: any) => ({
+    source: row[0],
+    views: row[1],
+  }));
+
+  const countries = countriesRaw.map((row: any) => ({
+    code: row[0],
+    views: row[1],
+  }));
+
+  return {
+    channel: {
+      title: channelInfo.snippet.title,
+      handle: channelInfo.snippet.customUrl,
+      avatar:
+        channelInfo.snippet.thumbnails?.medium?.url ||
+        channelInfo.snippet.thumbnails?.default?.url ||
+        "",
+      url: `https://youtube.com/${channelInfo.snippet.customUrl || "channel/" + channelInfo.id}`,
+      subscriberCount: parseInt(channelInfo.statistics.subscriberCount),
+      videoCount: parseInt(channelInfo.statistics.videoCount),
+      viewCount: parseInt(channelInfo.statistics.viewCount),
+    },
+    overview,
+    topVideos,
+    topSubscriberVideos,
+    demographics,
+    trafficSources,
+    countries,
+  };
 }

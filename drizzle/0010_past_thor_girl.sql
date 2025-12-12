@@ -1,0 +1,1 @@
+ALTER TABLE "history" ADD COLUMN "total_interactions" integer DEFAULT 0;
