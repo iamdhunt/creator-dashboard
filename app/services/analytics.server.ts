@@ -12,9 +12,15 @@ import {
   getChannelOverview,
   getTopCountries,
   getTopSubscriberVideos,
+  getShortsAggregateRatios,
+  getTopShortsVideos,
+  getTopSubscriberShortsVideos,
+  getSingleTopVideo,
+  getSingleTopShort,
 } from "./youtube.server";
 import { subscribe } from "diagnostics_channel";
 import { get } from "http";
+import { watch } from "fs";
 
 const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
@@ -361,6 +367,7 @@ export async function getYoutubeDashboardData(
 
   const channelInfo = await getChannelInfo(accessToken);
 
+  console.log("🌍 Fetching from YouTube API...");
   const [
     topVideosRaw,
     topSubVideosRaw,
@@ -368,6 +375,15 @@ export async function getYoutubeDashboardData(
     trafficRaw,
     countriesRaw,
     overview,
+    shortsRatios,
+    topShortsRaw,
+    topSubShortsRaw,
+    topVideoByViewsRaw,
+    topVideoBySubsRaw,
+    topVideoByEstimatedMinutesWatchedRaw,
+    topShortByViewsRaw,
+    topShortBySubsRaw,
+    topShortByEstimatedMinutesWatchedRaw,
   ] = await Promise.all([
     getTopVideos(accessToken, account.platformAccountId!, startStr, endStr),
     getTopSubscriberVideos(
@@ -390,11 +406,83 @@ export async function getYoutubeDashboardData(
       startStr,
       endStr
     ),
+    getShortsAggregateRatios(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr
+    ),
+    getTopShortsVideos(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr
+    ),
+    getTopSubscriberShortsVideos(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr
+    ),
+    getSingleTopVideo(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr,
+      "-views"
+    ),
+    getSingleTopVideo(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr,
+      "-subscribersGained"
+    ),
+    getSingleTopVideo(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr,
+      "-estimatedMinutesWatched"
+    ),
+    getSingleTopShort(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr,
+      "-views"
+    ),
+    getSingleTopShort(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr,
+      "-subscribersGained"
+    ),
+    getSingleTopShort(
+      accessToken,
+      account.platformAccountId!,
+      startStr,
+      endStr,
+      "-estimatedMinutesWatched"
+    ),
   ]);
 
   const allVideoIds = new Set([
     ...topVideosRaw.map((r: any) => r[0]),
     ...topSubVideosRaw.map((r: any) => r[0]),
+    ...topShortsRaw.map((r: any) => r[0]),
+    ...topSubShortsRaw.map((r: any) => r[0]),
+    ...(topVideoByViewsRaw ? [topVideoByViewsRaw[0]] : []),
+    ...(topVideoBySubsRaw ? [topVideoBySubsRaw[0]] : []),
+    ...(topVideoByEstimatedMinutesWatchedRaw
+      ? [topVideoByEstimatedMinutesWatchedRaw[0]]
+      : []),
+    ...(topShortByViewsRaw ? [topShortByViewsRaw[0]] : []),
+    ...(topShortBySubsRaw ? [topShortBySubsRaw[0]] : []),
+    ...(topShortByEstimatedMinutesWatchedRaw
+      ? [topShortByEstimatedMinutesWatchedRaw[0]]
+      : []),
   ]);
   const videoDetails = await getVideoDetails(
     accessToken,
@@ -404,25 +492,162 @@ export async function getYoutubeDashboardData(
   const topVideos = topVideosRaw.map((row: any) => ({
     id: row[0],
     title: videoDetails[row[0]]?.title || "Unknown Video",
-    thumbnail: videoDetails[row[0]]?.thumbnail || "",
+    thumbnail:
+      videoDetails[row[0]]?.thumbnail?.maxres?.url ||
+      videoDetails[row[0]]?.thumbnail?.standard?.url ||
+      videoDetails[row[0]]?.thumbnail?.high?.url ||
+      "",
     views: row[1],
-    likes: row[2],
-    comments: row[3],
-    shares: row[4],
-    avgViewPercentage: row[5],
-    subscribersGained: row[6],
-    avgDuration: row[7],
+    engagedViews: row[2],
+    likes: row[3],
+    comments: row[4],
+    shares: row[5],
+    avgViewPercentage: row[6],
+    subscribersGained: row[7],
+    avgDuration: row[8],
+    watchTimeHours: row[9] / 60,
   }));
+
+  const topVideoByViews = topVideoByViewsRaw
+    ? {
+        id: topVideoByViewsRaw[0],
+        title: videoDetails[topVideoByViewsRaw[0]]?.title || "Unknown Video",
+        thumbnail:
+          videoDetails[topVideoByViewsRaw[0]]?.thumbnail?.maxres?.url ||
+          videoDetails[topVideoByViewsRaw[0]]?.thumbnail?.standard?.url ||
+          videoDetails[topVideoByViewsRaw[0]]?.thumbnail?.high?.url ||
+          "",
+        views: Number(topVideoByViewsRaw[1]) || 0,
+        engagedViews: Number(topVideoByViewsRaw[2]) || 0,
+      }
+    : null;
+
+  const topVideoBySubs = topVideoBySubsRaw
+    ? {
+        id: topVideoBySubsRaw[0],
+        title: videoDetails[topVideoBySubsRaw[0]]?.title || "Unknown Video",
+        thumbnail:
+          videoDetails[topVideoBySubsRaw[0]]?.thumbnail?.maxres?.url ||
+          videoDetails[topVideoBySubsRaw[0]]?.thumbnail?.standard?.url ||
+          videoDetails[topVideoBySubsRaw[0]]?.thumbnail?.high?.url ||
+          "",
+        subscribersGained: Number(topVideoBySubsRaw[3]) || 0,
+      }
+    : null;
+
+  const topVideoByEstimatedMinutesWatched = topVideoByEstimatedMinutesWatchedRaw
+    ? {
+        id: topVideoByEstimatedMinutesWatchedRaw[0],
+        title:
+          videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.title ||
+          "Unknown Video",
+        thumbnail:
+          videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.thumbnail
+            ?.maxres?.url ||
+          videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.thumbnail
+            ?.standard?.url ||
+          videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.thumbnail?.high
+            ?.url ||
+          "",
+        watchTimeHours:
+          Number(topVideoByEstimatedMinutesWatchedRaw[4]) / 60 || 0,
+      }
+    : null;
 
   const topSubscriberVideos = topSubVideosRaw.map((row: any) => ({
     id: row[0],
     title: videoDetails[row[0]]?.title || "Unknown Video",
-    thumbnail: videoDetails[row[0]]?.thumbnail || "",
+    thumbnail:
+      videoDetails[row[0]]?.thumbnail?.maxres?.url ||
+      videoDetails[row[0]]?.thumbnail?.standard?.url ||
+      videoDetails[row[0]]?.thumbnail?.high?.url ||
+      "",
     views: row[1],
-    subscribersGained: row[2],
-    subscribersLost: row[3],
-    avgViewPercentage: row[4],
+    engagedViews: row[2],
+    subscribersGained: row[3],
+    subscribersLost: row[4],
+    avgViewPercentage: row[5],
   }));
+
+  const topShortsVideos = topShortsRaw.map((row: any) => ({
+    id: row[0],
+    title: videoDetails[row[0]]?.title || "Unknown Video",
+    thumbnail:
+      videoDetails[row[0]]?.thumbnail?.maxres?.url ||
+      videoDetails[row[0]]?.thumbnail?.standard?.url ||
+      videoDetails[row[0]]?.thumbnail?.high?.url ||
+      "",
+    views: row[1],
+    engagedViews: row[2],
+    likes: row[3],
+    comments: row[4],
+    shares: row[5],
+    avgViewPercentage: row[6],
+    subscribersGained: row[7],
+    avgDuration: row[8],
+    watchTimeHours: row[9] / 60,
+  }));
+
+  const topSubscriberShorts = topSubShortsRaw.map((row: any) => ({
+    id: row[0],
+    title: videoDetails[row[0]]?.title || "Unknown Video",
+    thumbnail:
+      videoDetails[row[0]]?.thumbnail?.maxres?.url ||
+      videoDetails[row[0]]?.thumbnail?.standard?.url ||
+      videoDetails[row[0]]?.thumbnail?.high?.url ||
+      "",
+    views: row[1],
+    engagedViews: row[2],
+    subscribersGained: row[3],
+    subscribersLost: row[4],
+    avgViewPercentage: row[5],
+  }));
+
+  const topShortByViews = topShortByViewsRaw
+    ? {
+        id: topShortByViewsRaw[0],
+        title: videoDetails[topShortByViewsRaw[0]]?.title || "Unknown Video",
+        thumbnail:
+          videoDetails[topShortByViewsRaw[0]]?.thumbnail?.maxres?.url ||
+          videoDetails[topShortByViewsRaw[0]]?.thumbnail?.standard?.url ||
+          videoDetails[topShortByViewsRaw[0]]?.thumbnail?.high?.url ||
+          "",
+        views: Number(topShortByViewsRaw[1]) || 0,
+        engagedViews: Number(topShortByViewsRaw[2]) || 0,
+      }
+    : null;
+
+  const topShortBySubs = topShortBySubsRaw
+    ? {
+        id: topShortBySubsRaw[0],
+        title: videoDetails[topShortBySubsRaw[0]]?.title || "Unknown Video",
+        thumbnail:
+          videoDetails[topShortBySubsRaw[0]]?.thumbnail?.maxres?.url ||
+          videoDetails[topShortBySubsRaw[0]]?.thumbnail?.standard?.url ||
+          videoDetails[topShortBySubsRaw[0]]?.thumbnail?.high?.url ||
+          "",
+        subscribersGained: Number(topShortBySubsRaw[3]) || 0,
+      }
+    : null;
+
+  const topShortByEstimatedMinutesWatched = topShortByEstimatedMinutesWatchedRaw
+    ? {
+        id: topShortByEstimatedMinutesWatchedRaw[0],
+        title:
+          videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.title ||
+          "Unknown Video",
+        thumbnail:
+          videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.thumbnail
+            ?.maxres?.url ||
+          videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.thumbnail
+            ?.standard?.url ||
+          videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.thumbnail?.high
+            ?.url ||
+          "",
+        watchTimeHours:
+          Number(topShortByEstimatedMinutesWatchedRaw[4]) / 60 || 0,
+      }
+    : null;
 
   const demographics = demographicsRaw.map((row: any) => ({
     age: row[0],
@@ -459,5 +684,14 @@ export async function getYoutubeDashboardData(
     demographics,
     trafficSources,
     countries,
+    shortsRatios,
+    topShortsVideos,
+    topSubscriberShorts,
+    topVideoByViews,
+    topVideoBySubs,
+    topVideoByEstimatedMinutesWatched,
+    topShortByViews,
+    topShortBySubs,
+    topShortByEstimatedMinutesWatched,
   };
 }

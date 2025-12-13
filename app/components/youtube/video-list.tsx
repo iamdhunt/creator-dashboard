@@ -1,9 +1,9 @@
-export function VideoList({ videos }: { videos: any[] }) {
+export function VideoList({ videos, title }: { videos: any[]; title: string }) {
   return (
     <div className="rounded-lg bg-white shadow">
       <div className="p-6">
         <h3 className="text-base font-semibold leading-6 text-gray-900">
-          Top Performing Videos
+          {title}
         </h3>
       </div>
       <div className="border-t border-gray-200 overflow-x-auto">
@@ -18,6 +18,9 @@ export function VideoList({ videos }: { videos: any[] }) {
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Subs Gained
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Watch Time (hrs)
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Avg. View %
@@ -58,6 +61,9 @@ export function VideoList({ videos }: { videos: any[] }) {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">
                   {video.subscribersGained.toLocaleString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">
+                  {video.watchTimeHours.toFixed(1)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">
                   {video.avgViewPercentage.toFixed(1)}%
