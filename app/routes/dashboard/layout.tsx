@@ -1,6 +1,6 @@
 import { Outlet, useLoaderData } from "react-router";
 import type { Route } from "./+types/layout";
-import { requireUserId, logout } from "~/services/auth.server";
+import { requireUserId } from "~/services/auth.server";
 import DashboardSidebar from "~/components/dashboard-sidebar";
 import { db } from "~/db/db.server";
 import { accounts } from "~/db/schema";
@@ -19,10 +19,6 @@ export async function loader({ request }: Route.LoaderArgs) {
     .where(eq(accounts.userId, userId));
 
   return { userAccounts };
-}
-
-export async function action({ request }: Route.ActionArgs) {
-  return logout(request);
 }
 
 export default function DashboardLayout() {

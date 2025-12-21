@@ -72,7 +72,7 @@ export async function createUserSession(userId: string, redirectTo: string) {
 
 export async function logout(request: Request) {
   const session = await storage.getSession(request.headers.get("Cookie"));
-  return redirect("/auth/login", {
+  return redirect("/", {
     headers: {
       "Set-Cookie": await storage.destroySession(session),
     },

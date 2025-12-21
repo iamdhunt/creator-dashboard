@@ -343,7 +343,7 @@ export async function getTopCountries(
   const metrics = "views";
   const dimensions = "country";
   const sort = "-views";
-  const maxResults = "5";
+  const maxResults = "4";
 
   const url = new URL("https://youtubeanalytics.googleapis.com/v2/reports");
   url.searchParams.append("ids", `channel==${channelId}`);

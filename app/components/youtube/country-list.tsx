@@ -25,7 +25,13 @@ export function CountryList({ data }: { data: CountryData[] }) {
                   </p>
                 </div>
                 <div className="inline-flex items-center text-sm font-semibold">
-                  {country.views.toLocaleString()} views
+                  {new Intl.NumberFormat("en", {
+                    notation: "compact",
+                    maximumFractionDigits: 1,
+                  })
+                    .format(country.views)
+                    .toLowerCase()}{" "}
+                  views
                 </div>
               </div>
             </li>

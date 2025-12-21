@@ -13,7 +13,7 @@ export default function Header({ userId }: HeaderProps) {
       </div>
       <div className="block absolute right-2 transition-all duration-500 ease-out transform hover:-translate-y-3">
         {userId ? (
-          <Form method="post">
+          <Form method="post" action="/auth/logout">
             <button
               type="submit"
               className="px-6 py-2 text-sm uppercase font-bold text-text-inverse text-center hover:cursor-pointer"
