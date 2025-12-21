@@ -6,6 +6,12 @@ import { emailSchema } from "~/services/validation";
 import z from "zod";
 import { eq } from "drizzle-orm";
 import { sendPasswordResetEmail } from "~/services/email.server";
+import { redirectIfLoggedIn } from "~/services/auth.server";
+
+export async function loader({ request }: Route.LoaderArgs) {
+  await redirectIfLoggedIn(request);
+  return null;
+}
 
 const forgottenPasswordSchema = z.object({
   email: emailSchema,
@@ -40,13 +46,13 @@ export default function ForgotPassword() {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-md space-y-8 rounded-lg bg-surface p-8 shadow-md">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-          <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
+          <h2 className="text-center text-3xl font-bold tracking-tight">
             Reset your password
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm">
             Enter your email address and we'll send you a link to reset your
             password.
           </p>
@@ -81,7 +87,7 @@ export default function ForgotPassword() {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium leading-6 text-gray-900"
+                  className="block text-sm font-medium leading-6"
                 >
                   Email address
                 </label>
@@ -92,20 +98,20 @@ export default function ForgotPassword() {
                     type="email"
                     autoComplete="email"
                     required
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 p-2"
+                    className="block w-full rounded-md border border-transparent bg-offwhite text-text-main px-3 py-2 shadow-sm focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue sm:text-sm"
                   />
                 </div>
                 {actionData?.error && (
-                  <p className="mt-2 text-sm text-red-600">
+                  <div className="mt-2 rounded-md bg-red-50 p-4 text-sm text-red-700">
                     {actionData.error}
-                  </p>
+                  </div>
                 )}
               </div>
               <div>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 cursor-pointer"
+                  className="flex w-full justify-center rounded-md border border-transparent bg-accent px-4 py-2 text-sm font-medium shadow-sm hover:cursor-pointer hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-inverse focus:ring-offset-2 disabled:opacity-50"
                 >
                   {isSubmitting ? "Sending..." : "Send Reset Link"}
                 </button>
@@ -113,7 +119,7 @@ export default function ForgotPassword() {
               <div className="text-center">
                 <Link
                   to="/auth/login"
-                  className="text-sm text-gray-500 hover:text-gray-900"
+                  className="font-medium text-accent-blue hover:underline focus:outline-none focus:ring-2 focus:ring-accent-blue"
                 >
                   Back to login
                 </Link>

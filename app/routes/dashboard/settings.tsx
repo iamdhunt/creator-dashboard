@@ -9,6 +9,7 @@ import { users } from "~/db/schema";
 import bcrypt from "bcryptjs";
 import { updateProfileSchema } from "~/services/validation";
 import { generateAuthUrl, revokeToken } from "~/services/youtube.server";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const userId = await requireUserId(request);
@@ -138,7 +139,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="mx-auto">
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
       {actionData?.success && (
@@ -153,10 +154,10 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
-        <h2 className="text-lg font-medium mb-4">Connected Accounts</h2>
+      <div className="bg-surface shadow rounded-lg p-6 mb-6">
+        <h2 className="font-medium mb-4">Connected Accounts</h2>
         {accounts.length === 0 ? (
-          <p className="text-gray-500">No accounts connected yet.</p>
+          <p className="">No accounts connected yet.</p>
         ) : (
           <ul className="divide-y divide-gray-200">
             {accounts.map((account) => (
@@ -165,17 +166,15 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
                 className="py-4 flex justify-between items-center"
               >
                 <div>
-                  <p className="font-medium text-gray-900 capitalize">
-                    {account.platform}
-                  </p>
-                  <p className="text-sm text-gray-500">@{account.username}</p>
+                  <p className="font-medium capitalize">{account.platform}</p>
+                  <p className="text-sm">@{account.username}</p>
                 </div>
                 <Form method="post">
                   <input type="hidden" name="intent" value="disconnect" />
                   <input type="hidden" name="accountId" value={account.id} />
                   <button
                     type="submit"
-                    className="text-sm text-red-600 hover:text-red-900 cursor-pointer"
+                    className="text-sm text-red-600 border-2 border-transparent hover:border-2 hover:border-red-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-600"
                     disabled={isSubmitting}
                   >
                     Disconnect
@@ -186,107 +185,47 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
           </ul>
         )}
       </div>
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
+      <div className="bg-surface shadow rounded-lg p-6 mb-6">
         <h2 className="text-lg font-medium mb-4">Connect New Account</h2>
         <Form method="post">
           <input type="hidden" name="intent" value="init-youtube" />
           <button
             type="submit"
-            className="flex w-full items-center justify-center gap-3 rounded-md bg-[#FF0000] px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#D90000] focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-[#FF0000] cursor-pointer"
+            className="flex w-full items-center justify-center gap-3 rounded-md bg-[#FF0000] px-3 py-2 text-sm font-semibold shadow-sm hover:bg-[#D90000] focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-[#FF0000] cursor-pointer"
           >
-            <svg
-              className="h-5 w-5"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-            </svg>
+            <FontAwesomeIcon icon={["fab", "youtube"]} size="lg" />
             Connect YouTube
-          </button>
-        </Form>
-
-        <Form method="post" className="space-y-4">
-          <input type="hidden" name="intent" value="connect" />
-
-          <div>
-            <label
-              htmlFor="platform"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Platform
-            </label>
-            <select
-              name="platform"
-              id="platform"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-            >
-              <option value="youtube">YouTube</option>
-              <option value="twitter">Twitter / X</option>
-              <option value="instagram">Instagram</option>
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="username"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Username / Handle
-            </label>
-            <input
-              type="text"
-              name="username"
-              id="username"
-              required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-              placeholder="e.g. mychannel"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 cursor-pointer"
-          >
-            {isSubmitting ? "Connecting..." : "Connect Account"}
           </button>
         </Form>
       </div>
 
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
+      <div className="bg-surface shadow rounded-lg p-6 mb-6">
         <h2 className="text-lg font-medium mb-4">Update Profile</h2>
         <Form method="post" className="space-y-4">
           <input type="hidden" name="intent" value="update-profile" />
 
           <div>
-            <label
-              htmlFor="newEmail"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="newEmail" className="block text-sm font-medium">
               New Email Address
             </label>
             <input
               type="email"
               name="newEmail"
               id="newEmail"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+              className="mt-1 block w-full rounded-md bg-offwhite border border-transparent shadow-sm sm:text-sm p-2 focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue placeholder-gray-500"
               placeholder={user.email}
             />
           </div>
 
           <div>
-            <label
-              htmlFor="newPassword"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="newPassword" className="block text-sm font-medium">
               New Password
             </label>
             <input
               type="password"
               name="newPassword"
               id="newPassword"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+              className="mt-1 block w-full rounded-md bg-offwhite border border-transparent shadow-sm sm:text-sm p-2 focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue placeholder-gray-500"
               placeholder="Leave blank to keep current"
             />
           </div>
@@ -294,26 +233,24 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
           <div className="pt-4 border-t border-gray-100">
             <label
               htmlFor="currentPassword"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium"
             >
               Current Password <span className="text-red-500">*</span>
             </label>
-            <p className="text-xs text-gray-500 mb-2">
-              Required to save changes
-            </p>
+            <p className="text-xs mb-2 opacity-60">Required to save changes</p>
             <input
               type="password"
               name="currentPassword"
               id="currentPassword"
               required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+              className="mt-1 block w-full rounded-md bg-offwhite text-text-main shadow-sm sm:text-sm p-2 border border-transparent focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue"
             />
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 cursor-pointer"
+            className="inline-flex justify-center rounded-md border border-transparent bg-accent py-2 px-4 text-sm font-medium shadow-sm hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? "Saving..." : "Save Changes"}
           </button>
@@ -330,7 +267,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
           <input type="hidden" name="intent" value="delete-user" />
           <button
             type="submit"
-            className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 cursor-pointer"
+            className="bg-red-600 px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 cursor-pointer"
             onClick={(e) => {
               if (
                 !confirm(

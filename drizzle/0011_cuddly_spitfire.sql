@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD CONSTRAINT "accounts_platform_platform_account_id_unique" UNIQUE("platform","platform_account_id");

@@ -3,45 +3,41 @@ import { SubscriberVideoList } from "~/components/youtube/subscriber-video-list"
 import { VideoList } from "~/components/youtube/video-list";
 import YouTubeTopVideoCard from "~/components/youtube/top-video-card";
 
-export async function loader() {}
-
-export async function action() {}
-
-export default function YoutubeShorts() {
+export default function YoutubeChannelShorts() {
   const { data } = useOutletContext<any>();
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-4">
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">
+        <div className="overflow-hidden rounded-lg bg-surface px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium opacity-75">
             Like-to-View Ratio
           </dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+          <dd className="mt-1 text-3xl font-semibold tracking-tight">
             {data.shortsRatios?.likeToView.toFixed(2)}%
           </dd>
         </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">
+        <div className="overflow-hidden rounded-lg bg-surface px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium opacity-75">
             Comment-to-View Ratio
           </dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+          <dd className="mt-1 text-3xl font-semibold tracking-tight">
             {data.shortsRatios?.commentToView.toFixed(2)}%
           </dd>
         </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">
+        <div className="overflow-hidden rounded-lg bg-surface px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium opacity-75">
             Share-to-View Ratio
           </dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+          <dd className="mt-1 text-3xl font-semibold tracking-tight">
             {data.shortsRatios?.shareToView.toFixed(2)}%
           </dd>
         </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">
+        <div className="overflow-hidden rounded-lg bg-surface px-4 py-5 shadow sm:p-6">
+          <dt className="truncate text-sm font-medium opacity-75">
             Avg. View Percentage
           </dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
+          <dd className="mt-1 text-3xl font-semibold tracking-tight">
             {data.shortsRatios?.avgPercentage.toFixed(2)}%
           </dd>
         </div>

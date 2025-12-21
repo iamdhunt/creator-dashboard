@@ -1,11 +1,13 @@
 import {
   LineChart,
   Line,
+  AreaChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Area,
 } from "recharts";
 import type { MultiLineChartData } from "~/utils/analytics";
 import { getPlatformColor } from "~/constants/colors";
@@ -69,11 +71,11 @@ export function GrowthChart({
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <h3 className="text-lg font-medium text-gray-900 mb-6">{title}</h3>
+    <div className="bg-surface p-6 rounded-lg shadow">
+      <h3 className="text-lg font-medium mb-10!">{title}</h3>
       <div className="h-80 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <AreaChart data={data}>
             <CartesianGrid
               strokeDasharray="3 3"
               vertical={false}
@@ -83,7 +85,7 @@ export function GrowthChart({
               dataKey="date"
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#6b7280", fontSize: 12 }}
+              tick={{ fill: "#fefefe", fontSize: 12 }}
               tickFormatter={(str) => {
                 const date = new Date(str);
                 return `${date.getMonth() + 1}/${date.getDate()}`;
@@ -93,7 +95,7 @@ export function GrowthChart({
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: "#6b7280", fontSize: 12 }}
+              tick={{ fill: "#fefefe", fontSize: 12 }}
               tickFormatter={(value) =>
                 value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value
               }
@@ -101,18 +103,20 @@ export function GrowthChart({
             />
             <Tooltip content={<CustomTooltip unit={unit} />} />
             {lines.map((line) => (
-              <Line
+              <Area
                 key={line.key}
                 type="monotone"
                 dataKey={line.key}
                 stroke={line.color}
+                fill={line.color}
+                fillOpacity={0.3}
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4, strokeWidth: 0 }}
                 name={line.name}
               />
             ))}
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>

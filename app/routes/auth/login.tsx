@@ -1,6 +1,12 @@
 import { Form, Link, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/login";
 import { login } from "~/services/auth.server";
+import { redirectIfLoggedIn } from "~/services/auth.server";
+
+export async function loader({ request }: Route.LoaderArgs) {
+  await redirectIfLoggedIn(request);
+  return null;
+}
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -27,10 +33,10 @@ export default function Login() {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-md space-y-8 rounded-lg bg-surface p-8 shadow-md">
         <div>
-          <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
+          <h2 className="text-center text-3xl font-bold tracking-tight">
             Sign in to your account
           </h2>
         </div>
@@ -43,10 +49,7 @@ export default function Login() {
           )}
 
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="email" className="block text-sm font-medium">
               Email address
             </label>
             <div className="mt-1">
@@ -56,23 +59,20 @@ export default function Login() {
                 type="email"
                 autoComplete="email"
                 required
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                className="block w-full rounded-md border border-transparent bg-offwhite text-text-main px-3 py-2 shadow-sm focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-inverse focus:ring-accent-blue sm:text-sm"
               />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
-              >
+              <label htmlFor="password" className="block text-sm font-medium">
                 Password
               </label>
               <div className="text-sm">
                 <Link
                   to="/auth/forgot-password"
-                  className="font-medium text-indigo-600 hover:text-indigo-500"
+                  className="font-medium hover:underline focus:outline-none focus:ring-2"
                 >
                   Forgot password?
                 </Link>
@@ -85,7 +85,7 @@ export default function Login() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                className="block w-full rounded-md border border-transparent bg-offwhite text-text-main px-3 py-2 shadow-sm focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-accent-blue sm:text-sm"
               />
             </div>
           </div>
@@ -93,17 +93,17 @@ export default function Login() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            className="flex w-full justify-center rounded-md border border-transparent bg-accent px-4 py-2 text-sm font-medium shadow-sm hover:cursor-pointer hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-inverse focus:ring-offset-2 disabled:opacity-50"
           >
             {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
         </Form>
 
         <div className="text-center text-sm">
-          <span className="text-gray-500">Don't have an account? </span>
+          <span className="text-inverse">Don't have an account? </span>
           <Link
             to="/auth/signup"
-            className="font-medium text-indigo-600 hover:text-indigo-500"
+            className="font-medium text-accent-blue hover:underline focus:outline-none focus:ring-2 focus:ring-accent-blue"
           >
             Sign up
           </Link>

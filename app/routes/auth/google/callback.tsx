@@ -28,15 +28,32 @@ export async function loader({ request }: Route.LoaderArgs) {
       return redirect("/dashboard/settings?error=No YouTube channel found");
     }
 
+    const rawHandle = channel.snippet.customUrl || channel.snippet.title;
+    const handle = rawHandle.replace(/^@/, "");
+
     // Save to Database
-    await db.insert(accounts).values({
-      userId,
-      platform: "youtube",
-      platformAccountId: channel.id,
-      username: channel.snippet.title,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-    });
+    await db
+      .insert(accounts)
+      .values({
+        userId,
+        platform: "youtube",
+        platformAccountId: channel.id,
+        username: handle,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      })
+      .onConflictDoUpdate({
+        target: [accounts.platform, accounts.platformAccountId],
+        set: {
+          username: handle,
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          followers: parseInt(channel.statistics.subscriberCount) || 0,
+          totalViews: parseInt(channel.statistics.viewCount) || 0,
+          totalPosts: parseInt(channel.statistics.videoCount) || 0,
+          updatedAt: new Date(),
+        },
+      });
 
     return redirect(
       "/dashboard/settings?success=YouTube account linked successfully"

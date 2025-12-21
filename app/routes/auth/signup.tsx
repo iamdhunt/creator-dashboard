@@ -3,6 +3,12 @@ import type { Route } from "./+types/signup";
 import { signup } from "~/services/auth.server";
 import { signupSchema } from "~/services/validation";
 import { z } from "zod";
+import { redirectIfLoggedIn } from "~/services/auth.server";
+
+export async function loader({ request }: Route.LoaderArgs) {
+  await redirectIfLoggedIn(request);
+  return null;
+}
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -45,10 +51,10 @@ export default function Signup() {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-md space-y-8 rounded-lg bg-surface p-8 shadow-md">
         <div>
-          <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
+          <h2 className="text-center text-3xl font-bold tracking-tight">
             Create your account
           </h2>
         </div>
@@ -61,10 +67,7 @@ export default function Signup() {
           )}
 
           <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="email" className="block text-sm font-medium">
               Email address
             </label>
             <div className="mt-1">
@@ -75,25 +78,22 @@ export default function Signup() {
                 autoComplete="email"
                 defaultValue={actionData?.fields?.email as string}
                 required
-                className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none sm:text-sm ${
+                className={`block text-text-main bg-offwhite w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-inverse sm:text-sm ${
                   actionData?.fieldErrors?.email
                     ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                    : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                    : "border-gray-300 focus:border-accent-blue focus:ring-accent-blue"
                 }`}
               />
             </div>
             {actionData?.fieldErrors?.email && (
-              <p className="mt-2 text-sm text-red-600">
+              <div className="mt-2 p-3 text-sm rounded-md bg-red-50 text-red-700">
                 {actionData.fieldErrors.email[0]}
-              </p>
+              </div>
             )}
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
+            <label htmlFor="password" className="block text-sm font-medium">
               Password
             </label>
             <div className="mt-1">
@@ -103,34 +103,34 @@ export default function Signup() {
                 type="password"
                 autoComplete="new-password"
                 required
-                className={`block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none sm:text-sm ${
+                className={`block text-text-main bg-offwhite w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-inverse sm:text-sm ${
                   actionData?.fieldErrors?.password
                     ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                    : "border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                    : "border-gray-300 focus:border-accent-blue focus:ring-accent-blue"
                 }`}
               />
             </div>
             {actionData?.fieldErrors?.password && (
-              <p className="mt-2 text-sm text-red-600">
+              <div className="mt-2 p-3 text-sm rounded-md bg-red-50 text-red-700">
                 {actionData.fieldErrors.password[0]}
-              </p>
+              </div>
             )}
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            className="flex w-full justify-center rounded-md border border-transparent bg-accent px-4 py-2 text-sm font-medium shadow-sm hover:cursor-pointer hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-inverse focus:ring-offset-2 disabled:opacity-50"
           >
             {isSubmitting ? "Creating account..." : "Sign up"}
           </button>
         </Form>
 
         <div className="text-center text-sm">
-          <span className="text-gray-500">Already have an account? </span>
+          <span className="text-inverse">Already have an account? </span>
           <Link
             to="/auth/login"
-            className="font-medium text-indigo-600 hover:text-indigo-500"
+            className="font-medium text-accent-blue hover:underline focus:outline-none focus:ring-2 focus:ring-accent-blue"
           >
             Sign in
           </Link>

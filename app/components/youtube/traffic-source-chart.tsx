@@ -61,8 +61,8 @@ export function TrafficSourceChart({ data }: { data: any[] }) {
   const totalViews = chartData.reduce((acc, item) => acc + item.views, 0);
 
   return (
-    <div className="rounded-lg bg-white p-6 shadow">
-      <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">
+    <div className="rounded-lg bg-surface p-6 shadow">
+      <h3 className="text-base font-semibold leading-6 mb-4">
         Traffic Sources
       </h3>
       <div className="h-64">

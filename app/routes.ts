@@ -20,9 +20,17 @@ export default [
     index("routes/dashboard/home.tsx"),
     route("content", "routes/dashboard/content.tsx"),
     route("settings", "routes/dashboard/settings.tsx"),
-    layout("routes/dashboard/youtube/youtube.tsx", [
-      route("youtube", "routes/dashboard/youtube/home.tsx"),
-      route("/dashboard/youtube/shorts", "routes/dashboard/youtube/shorts.tsx"),
+
+    route("youtube", "routes/dashboard/youtube/layout.tsx", [
+      index("routes/dashboard/youtube/index.tsx"),
+      route(":handle", "routes/dashboard/youtube/channel.tsx", [
+        index("routes/dashboard/youtube/overview.tsx"),
+        route("shorts", "routes/dashboard/youtube/shorts.tsx"),
+      ]),
     ]),
   ]),
+
+  route("privacy-policy", "routes/privacy-policy.tsx"),
+  route("terms-of-service", "routes/terms-of-service.tsx"),
+  route("faqs", "routes/faqs.tsx"),
 ] satisfies RouteConfig;

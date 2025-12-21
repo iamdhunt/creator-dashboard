@@ -17,23 +17,29 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const accounts = pgTable("accounts", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
-    .references(() => users.id, { onDelete: "cascade" })
-    .notNull(),
-  platform: text("platform").notNull(),
-  platformAccountId: text("platform_account_id").notNull(),
-  username: text("username").notNull(),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  followers: integer("followers").default(0),
-  totalViews: integer("total_views").default(0),
-  engagementRate: real("engagement_rate").default(0),
-  totalPosts: integer("total_posts").default(0),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const accounts = pgTable(
+  "accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    platform: text("platform").notNull(),
+    platformAccountId: text("platform_account_id").notNull(),
+    username: text("username").notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    followers: integer("followers").default(0),
+    totalViews: integer("total_views").default(0),
+    engagementRate: real("engagement_rate").default(0),
+    totalPosts: integer("total_posts").default(0),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => ({
+    unq: unique().on(t.platform, t.platformAccountId),
+  })
+);
 
 export const posts = pgTable("posts", {
   id: uuid("id").defaultRandom().primaryKey(),

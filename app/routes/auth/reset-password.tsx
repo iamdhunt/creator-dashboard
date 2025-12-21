@@ -13,6 +13,7 @@ import { users, passwordResetTokens } from "~/db/schema";
 import crypto from "crypto";
 import { and, eq, gt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { redirectIfLoggedIn } from "~/services/auth.server";
 
 const resetPasswordSchema = z
   .object({
@@ -27,6 +28,8 @@ const resetPasswordSchema = z
 export async function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const token = url.searchParams.get("token");
+
+  await redirectIfLoggedIn(request);
 
   if (!token) {
     return redirect("/auth/login");
@@ -90,10 +93,10 @@ export default function ResetPassword({ loaderData }: Route.ComponentProps) {
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-md space-y-8 rounded-lg bg-surface p-8 shadow-md">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-          <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
+          <h2 className="text-center text-3xl font-bold tracking-tight">
             Set new password
           </h2>
         </div>
@@ -103,7 +106,7 @@ export default function ResetPassword({ loaderData }: Route.ComponentProps) {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium leading-6 text-gray-900"
+                className="block text-sm font-medium leading-6"
               >
                 New Password
               </label>
@@ -113,14 +116,14 @@ export default function ResetPassword({ loaderData }: Route.ComponentProps) {
                   name="password"
                   type="password"
                   required
-                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 p-2"
+                  className="block w-full rounded-md border border-transparent bg-offwhite text-text-main px-3 py-2 shadow-sm focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-inverse focus:ring-accent-blue sm:text-sm"
                 />
               </div>
             </div>
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="block text-sm font-medium leading-6 text-gray-900"
+                className="block text-sm font-medium leading-6"
               >
                 Confirm Password
               </label>
@@ -130,7 +133,7 @@ export default function ResetPassword({ loaderData }: Route.ComponentProps) {
                   name="confirmPassword"
                   type="password"
                   required
-                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 p-2"
+                  className="block w-full rounded-md border border-transparent bg-offwhite text-text-main px-3 py-2 shadow-sm focus:border-accent-blue focus:outline-none focus:ring-2 focus:ring-inverse focus:ring-accent-blue sm:text-sm"
                 />
               </div>
             </div>
@@ -143,7 +146,7 @@ export default function ResetPassword({ loaderData }: Route.ComponentProps) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 cursor-pointer"
+                className="flex w-full justify-center rounded-md border border-transparent bg-accent px-4 py-2 text-sm font-medium shadow-sm hover:cursor-pointer hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-inverse focus:ring-offset-2 disabled:opacity-50"
               >
                 {isSubmitting ? "Resetting..." : "Reset Password"}
               </button>

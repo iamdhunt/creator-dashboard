@@ -96,7 +96,7 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
       <header>
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome back!</h1>
+            <h1 className="text-3xl font-bold">Welcome back!</h1>
           </div>
           <div className="flex items-center gap-4">
             {stats.accountCount > 0 && (
@@ -136,27 +136,27 @@ export default function DashboardHome({ loaderData }: Route.ComponentProps) {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         {/* Placeholder Stats Cards */}
-        <div className="rounded-lg bg-white p-6 shadow">
-          <h3 className="text-sm font-medium text-gray-500">Total Followers</h3>
-          <p className="mt-2 text-3xl font-bold text-gray-900">
+        <div className="rounded-lg p-6 shadow bg-surface flex flex-col justify-between">
+          <h3 className="text-sm font-medium">Total Followers</h3>
+          <p className="mt-2 text-3xl font-bold">
             {stats.totalFollowers.toLocaleString()}
           </p>
         </div>
-        <div className="rounded-lg bg-white p-6 shadow">
-          <h3 className="text-sm font-medium text-gray-500">Avg. Engagement</h3>
-          <p className="mt-2 text-3xl font-bold text-gray-900">
+        <div className="rounded-lg p-6 shadow bg-surface flex flex-col justify-between">
+          <h3 className="text-sm font-medium">Avg. Engagement</h3>
+          <p className="mt-2 text-3xl font-bold">
             {stats.avgEngagement.toFixed(2)}%
           </p>
         </div>
-        <div className="rounded-lg bg-white p-6 shadow">
-          <h3 className="text-sm font-medium text-gray-500">Total Views</h3>
-          <p className="mt-2 text-3xl font-bold text-gray-900">
+        <div className="rounded-lg p-6 shadow bg-surface flex flex-col justify-between">
+          <h3 className="text-sm font-medium">Total Views</h3>
+          <p className="mt-2 text-3xl font-bold">
             {stats.totalViews.toLocaleString()}
           </p>
         </div>
-        <div className="rounded-lg bg-white p-6 shadow">
-          <h3 className="text-sm font-medium text-gray-500">Total Posts</h3>
-          <p className="mt-2 text-3xl font-bold text-gray-900">
+        <div className="rounded-lg p-6 shadow bg-surface flex flex-col justify-between">
+          <h3 className="text-sm font-medium">Total Posts</h3>
+          <p className="mt-2 text-3xl font-bold">
             {stats.totalPosts.toLocaleString()}
           </p>
         </div>

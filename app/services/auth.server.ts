@@ -97,3 +97,11 @@ export async function requireUserId(
   }
   return userId;
 }
+
+export async function redirectIfLoggedIn(request: Request) {
+  const session = await storage.getSession(request.headers.get("Cookie"));
+  const userId = session.get("userId");
+  if (userId) {
+    throw redirect("/dashboard");
+  }
+}
