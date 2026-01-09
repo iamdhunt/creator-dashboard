@@ -1,13 +1,13 @@
 import { Link, Form, useNavigation, useSearchParams } from "react-router";
 import type { Route } from "./+types/home";
-import { requireUserId } from "~/services/auth.server";
+import { requireUserId } from "~/server/auth.server";
 import { eq } from "drizzle-orm";
 import { accounts, users } from "~/db/schema";
 import { db } from "~/db/db.server";
 import {
   refreshAccountStats,
   getAggregateAnalytics,
-} from "~/services/analytics.server";
+} from "~/server/analytics.server";
 import { GrowthChart } from "~/components/growth-chart";
 
 export async function loader({ request }: Route.LoaderArgs) {

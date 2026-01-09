@@ -1,5 +1,5 @@
 import { db } from "~/db/db.server";
-import { accounts, analyticsHistory } from "~/db/schema";
+import { accounts, analyticsHistory, apiCache } from "~/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import {
   getChannelAnalytics,
@@ -346,6 +346,19 @@ export async function getYoutubeDashboardData(
   accountId: string,
   days: number = 30
 ) {
+  const cacheKey = `youtube_dashboard_${days}d`;
+
+  const [cachedEntry] = await db
+    .select()
+    .from(apiCache)
+    .where(and(eq(apiCache.accountId, accountId), eq(apiCache.key, cacheKey)))
+    .limit(1);
+
+  if (cachedEntry && new Date(cachedEntry.expiresAt) > new Date()) {
+    console.log("⚡ Serving Dashboard from Cache");
+    return cachedEntry.data as any;
+  }
+
   const [account] = await db
     .select()
     .from(accounts)
@@ -489,183 +502,27 @@ export async function getYoutubeDashboardData(
     Array.from(allVideoIds)
   );
 
-  const topVideos = topVideosRaw.map((row: any) => ({
-    id: row[0],
-    title: videoDetails[row[0]]?.title || "Unknown Video",
-    thumbnail:
-      videoDetails[row[0]]?.thumbnail?.maxres?.url ||
-      videoDetails[row[0]]?.thumbnail?.standard?.url ||
-      videoDetails[row[0]]?.thumbnail?.high?.url ||
-      "",
-    views: row[1],
-    engagedViews: row[2],
-    likes: row[3],
-    comments: row[4],
-    shares: row[5],
-    avgViewPercentage: row[6],
-    subscribersGained: row[7],
-    avgDuration: row[8],
-    watchTimeHours: row[9] / 60,
-  }));
+  const processVideoList = (rows: any[]) =>
+    rows.map((row: any) => ({
+      id: row[0],
+      title: videoDetails[row[0]]?.title || "Unknown Video",
+      thumbnail:
+        videoDetails[row[0]]?.thumbnail?.maxres?.url ||
+        videoDetails[row[0]]?.thumbnail?.standard?.url ||
+        videoDetails[row[0]]?.thumbnail?.high?.url ||
+        "",
+      views: row[1],
+      engagedViews: row[2],
+      likes: row[3],
+      comments: row[4],
+      shares: row[5],
+      avgViewPercentage: row[6],
+      subscribersGained: row[7],
+      avgDuration: row[8],
+      watchTimeHours: row[9] / 60,
+    }));
 
-  const topVideoByViews = topVideoByViewsRaw
-    ? {
-        id: topVideoByViewsRaw[0],
-        title: videoDetails[topVideoByViewsRaw[0]]?.title || "Unknown Video",
-        thumbnail:
-          videoDetails[topVideoByViewsRaw[0]]?.thumbnail?.maxres?.url ||
-          videoDetails[topVideoByViewsRaw[0]]?.thumbnail?.standard?.url ||
-          videoDetails[topVideoByViewsRaw[0]]?.thumbnail?.high?.url ||
-          "",
-        views: Number(topVideoByViewsRaw[1]) || 0,
-        engagedViews: Number(topVideoByViewsRaw[2]) || 0,
-      }
-    : null;
-
-  const topVideoBySubs = topVideoBySubsRaw
-    ? {
-        id: topVideoBySubsRaw[0],
-        title: videoDetails[topVideoBySubsRaw[0]]?.title || "Unknown Video",
-        thumbnail:
-          videoDetails[topVideoBySubsRaw[0]]?.thumbnail?.maxres?.url ||
-          videoDetails[topVideoBySubsRaw[0]]?.thumbnail?.standard?.url ||
-          videoDetails[topVideoBySubsRaw[0]]?.thumbnail?.high?.url ||
-          "",
-        subscribersGained: Number(topVideoBySubsRaw[3]) || 0,
-      }
-    : null;
-
-  const topVideoByEstimatedMinutesWatched = topVideoByEstimatedMinutesWatchedRaw
-    ? {
-        id: topVideoByEstimatedMinutesWatchedRaw[0],
-        title:
-          videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.title ||
-          "Unknown Video",
-        thumbnail:
-          videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.thumbnail
-            ?.maxres?.url ||
-          videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.thumbnail
-            ?.standard?.url ||
-          videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.thumbnail?.high
-            ?.url ||
-          "",
-        watchTimeHours:
-          Number(topVideoByEstimatedMinutesWatchedRaw[4]) / 60 || 0,
-      }
-    : null;
-
-  const topSubscriberVideos = topSubVideosRaw.map((row: any) => ({
-    id: row[0],
-    title: videoDetails[row[0]]?.title || "Unknown Video",
-    thumbnail:
-      videoDetails[row[0]]?.thumbnail?.maxres?.url ||
-      videoDetails[row[0]]?.thumbnail?.standard?.url ||
-      videoDetails[row[0]]?.thumbnail?.high?.url ||
-      "",
-    views: row[1],
-    engagedViews: row[2],
-    subscribersGained: row[3],
-    subscribersLost: row[4],
-    avgViewPercentage: row[5],
-  }));
-
-  const topShortsVideos = topShortsRaw.map((row: any) => ({
-    id: row[0],
-    title: videoDetails[row[0]]?.title || "Unknown Video",
-    thumbnail:
-      videoDetails[row[0]]?.thumbnail?.maxres?.url ||
-      videoDetails[row[0]]?.thumbnail?.standard?.url ||
-      videoDetails[row[0]]?.thumbnail?.high?.url ||
-      "",
-    views: row[1],
-    engagedViews: row[2],
-    likes: row[3],
-    comments: row[4],
-    shares: row[5],
-    avgViewPercentage: row[6],
-    subscribersGained: row[7],
-    avgDuration: row[8],
-    watchTimeHours: row[9] / 60,
-  }));
-
-  const topSubscriberShorts = topSubShortsRaw.map((row: any) => ({
-    id: row[0],
-    title: videoDetails[row[0]]?.title || "Unknown Video",
-    thumbnail:
-      videoDetails[row[0]]?.thumbnail?.maxres?.url ||
-      videoDetails[row[0]]?.thumbnail?.standard?.url ||
-      videoDetails[row[0]]?.thumbnail?.high?.url ||
-      "",
-    views: row[1],
-    engagedViews: row[2],
-    subscribersGained: row[3],
-    subscribersLost: row[4],
-    avgViewPercentage: row[5],
-  }));
-
-  const topShortByViews = topShortByViewsRaw
-    ? {
-        id: topShortByViewsRaw[0],
-        title: videoDetails[topShortByViewsRaw[0]]?.title || "Unknown Video",
-        thumbnail:
-          videoDetails[topShortByViewsRaw[0]]?.thumbnail?.maxres?.url ||
-          videoDetails[topShortByViewsRaw[0]]?.thumbnail?.standard?.url ||
-          videoDetails[topShortByViewsRaw[0]]?.thumbnail?.high?.url ||
-          "",
-        views: Number(topShortByViewsRaw[1]) || 0,
-        engagedViews: Number(topShortByViewsRaw[2]) || 0,
-      }
-    : null;
-
-  const topShortBySubs = topShortBySubsRaw
-    ? {
-        id: topShortBySubsRaw[0],
-        title: videoDetails[topShortBySubsRaw[0]]?.title || "Unknown Video",
-        thumbnail:
-          videoDetails[topShortBySubsRaw[0]]?.thumbnail?.maxres?.url ||
-          videoDetails[topShortBySubsRaw[0]]?.thumbnail?.standard?.url ||
-          videoDetails[topShortBySubsRaw[0]]?.thumbnail?.high?.url ||
-          "",
-        subscribersGained: Number(topShortBySubsRaw[3]) || 0,
-      }
-    : null;
-
-  const topShortByEstimatedMinutesWatched = topShortByEstimatedMinutesWatchedRaw
-    ? {
-        id: topShortByEstimatedMinutesWatchedRaw[0],
-        title:
-          videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.title ||
-          "Unknown Video",
-        thumbnail:
-          videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.thumbnail
-            ?.maxres?.url ||
-          videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.thumbnail
-            ?.standard?.url ||
-          videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.thumbnail?.high
-            ?.url ||
-          "",
-        watchTimeHours:
-          Number(topShortByEstimatedMinutesWatchedRaw[4]) / 60 || 0,
-      }
-    : null;
-
-  const demographics = demographicsRaw.map((row: any) => ({
-    age: row[0],
-    gender: row[1],
-    percentage: row[2],
-  }));
-
-  const trafficSources = trafficRaw.map((row: any) => ({
-    source: row[0],
-    views: row[1],
-  }));
-
-  const countries = countriesRaw.map((row: any) => ({
-    code: row[0],
-    views: row[1],
-  }));
-
-  return {
+  const resultData = {
     channel: {
       title: channelInfo.snippet.title,
       handle: channelInfo.snippet.customUrl,
@@ -679,19 +536,126 @@ export async function getYoutubeDashboardData(
       viewCount: parseInt(channelInfo.statistics.viewCount),
     },
     overview,
-    topVideos,
-    topSubscriberVideos,
-    demographics,
-    trafficSources,
-    countries,
+    topVideos: processVideoList(topVideosRaw),
+    topSubscriberVideos: topSubVideosRaw.map((row: any) => ({
+      id: row[0],
+      title: videoDetails[row[0]]?.title || "Unknown Video",
+      thumbnail:
+        videoDetails[row[0]]?.thumbnail?.maxres?.url ||
+        videoDetails[row[0]]?.thumbnail?.standard?.url ||
+        "",
+      views: row[1],
+      engagedViews: row[2],
+      subscribersGained: row[3],
+      subscribersLost: row[4],
+      avgViewPercentage: row[5],
+    })),
+    demographics: demographicsRaw.map((row: any) => ({
+      age: row[0],
+      gender: row[1],
+      percentage: row[2],
+    })),
+    trafficSources: trafficRaw.map((row: any) => ({
+      source: row[0],
+      views: row[1],
+    })),
+    countries: countriesRaw.map((row: any) => ({
+      code: row[0],
+      views: row[1],
+    })),
     shortsRatios,
-    topShortsVideos,
-    topSubscriberShorts,
-    topVideoByViews,
-    topVideoBySubs,
-    topVideoByEstimatedMinutesWatched,
-    topShortByViews,
-    topShortBySubs,
-    topShortByEstimatedMinutesWatched,
+    topShortsVideos: processVideoList(topShortsRaw),
+    topSubscriberShorts: topSubShortsRaw.map((row: any) => ({
+      id: row[0],
+      title: videoDetails[row[0]]?.title || "Unknown Video",
+      thumbnail:
+        videoDetails[row[0]]?.thumbnail?.maxres?.url ||
+        videoDetails[row[0]]?.thumbnail?.standard?.url ||
+        "",
+      views: row[1],
+      engagedViews: row[2],
+      subscribersGained: row[3],
+      subscribersLost: row[4],
+      avgViewPercentage: row[5],
+    })),
+    // All single top video objects
+    topVideoByViews: topVideoByViewsRaw
+      ? {
+          id: topVideoByViewsRaw[0],
+          title: videoDetails[topVideoByViewsRaw[0]]?.title,
+          thumbnail:
+            videoDetails[topVideoByViewsRaw[0]]?.thumbnail?.maxres?.url,
+          views: Number(topVideoByViewsRaw[1]),
+          engagedViews: Number(topVideoByViewsRaw[2]),
+        }
+      : null,
+    topVideoBySubs: topVideoBySubsRaw
+      ? {
+          id: topVideoBySubsRaw[0],
+          title: videoDetails[topVideoBySubsRaw[0]]?.title,
+          thumbnail: videoDetails[topVideoBySubsRaw[0]]?.thumbnail?.maxres?.url,
+          subscribersGained: Number(topVideoBySubsRaw[3]),
+        }
+      : null,
+    topVideoByEstimatedMinutesWatched: topVideoByEstimatedMinutesWatchedRaw
+      ? {
+          id: topVideoByEstimatedMinutesWatchedRaw[0],
+          title: videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.title,
+          thumbnail:
+            videoDetails[topVideoByEstimatedMinutesWatchedRaw[0]]?.thumbnail
+              ?.maxres?.url,
+          watchTimeHours: Number(topVideoByEstimatedMinutesWatchedRaw[4]) / 60,
+        }
+      : null,
+    topShortByViews: topShortByViewsRaw
+      ? {
+          id: topShortByViewsRaw[0],
+          title: videoDetails[topShortByViewsRaw[0]]?.title,
+          thumbnail:
+            videoDetails[topShortByViewsRaw[0]]?.thumbnail?.maxres?.url,
+          views: Number(topShortByViewsRaw[1]),
+          engagedViews: Number(topShortByViewsRaw[2]),
+        }
+      : null,
+    topShortBySubs: topShortBySubsRaw
+      ? {
+          id: topShortBySubsRaw[0],
+          title: videoDetails[topShortBySubsRaw[0]]?.title,
+          thumbnail: videoDetails[topShortBySubsRaw[0]]?.thumbnail?.maxres?.url,
+          subscribersGained: Number(topShortBySubsRaw[3]),
+        }
+      : null,
+    topShortByEstimatedMinutesWatched: topShortByEstimatedMinutesWatchedRaw
+      ? {
+          id: topShortByEstimatedMinutesWatchedRaw[0],
+          title: videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.title,
+          thumbnail:
+            videoDetails[topShortByEstimatedMinutesWatchedRaw[0]]?.thumbnail
+              ?.maxres?.url,
+          watchTimeHours: Number(topShortByEstimatedMinutesWatchedRaw[4]) / 60,
+        }
+      : null,
   };
+
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + 24);
+
+  await db
+    .insert(apiCache)
+    .values({
+      accountId: accountId,
+      key: cacheKey,
+      data: resultData,
+      expiresAt: expiresAt,
+    })
+    .onConflictDoUpdate({
+      target: [apiCache.accountId, apiCache.key],
+      set: {
+        data: resultData,
+        expiresAt: expiresAt,
+        updatedAt: new Date(),
+      },
+    });
+
+  return resultData;
 }

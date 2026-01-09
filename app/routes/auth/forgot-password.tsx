@@ -1,12 +1,12 @@
 import { Form, Link, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/forgot-password";
 import { db } from "~/db/db.server";
-import { users } from "~/db/schema";
-import { emailSchema } from "~/services/validation";
+import { users, passwordResetTokens } from "~/db/schema";
+import { emailSchema } from "~/server/validation";
 import z from "zod";
 import { eq } from "drizzle-orm";
-import { sendPasswordResetEmail } from "~/services/email.server";
-import { redirectIfLoggedIn } from "~/services/auth.server";
+import { sendPasswordResetEmail } from "~/server/email.server";
+import { redirectIfLoggedIn } from "~/server/auth.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
   await redirectIfLoggedIn(request);
@@ -34,7 +34,17 @@ export async function action({ request }: Route.ActionArgs) {
     .limit(1);
 
   if (user) {
-    await sendPasswordResetEmail(user.email, user.id);
+    const token = crypto.randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    await db.insert(passwordResetTokens).values({
+      userId: user.id,
+      tokenHash: token,
+      expiresAt: expiresAt,
+    });
+
+    await sendPasswordResetEmail(user.email, token);
   }
 
   return { success: true };

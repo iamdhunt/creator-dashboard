@@ -8,7 +8,7 @@ import {
   useLoaderData,
 } from "react-router";
 
-import { getUserId } from "./services/auth.server";
+import { getUserId } from "./server/auth.server";
 import type { Route } from "./+types/root";
 import "./app.css";
 import { Footer } from "./components/footer";

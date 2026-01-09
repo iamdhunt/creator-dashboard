@@ -7,13 +7,13 @@ import {
 } from "react-router";
 import type { Route } from "./+types/reset-password";
 import z from "zod";
-import { passwordSchema } from "~/services/validation";
+import { passwordSchema } from "~/server/validation";
 import { db } from "~/db/db.server";
 import { users, passwordResetTokens } from "~/db/schema";
 import crypto from "crypto";
 import { and, eq, gt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { redirectIfLoggedIn } from "~/services/auth.server";
+import { redirectIfLoggedIn } from "~/server/auth.server";
 
 const resetPasswordSchema = z
   .object({

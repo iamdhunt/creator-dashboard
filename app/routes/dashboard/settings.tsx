@@ -1,14 +1,14 @@
 import { Form, useNavigation, useActionData, redirect } from "react-router";
 import type { Route } from "./+types/settings";
-import { requireUserId } from "~/services/auth.server";
+import { requireUserId } from "~/server/auth.server";
 import { db } from "~/db/db.server";
 import { accounts } from "~/db/schema";
 import { eq, and } from "drizzle-orm";
-import { logout } from "~/services/auth.server";
+import { logout } from "~/server/auth.server";
 import { users } from "~/db/schema";
 import bcrypt from "bcryptjs";
-import { updateProfileSchema } from "~/services/validation";
-import { generateAuthUrl, revokeToken } from "~/services/youtube.server";
+import { updateProfileSchema } from "~/server/validation";
+import { generateAuthUrl, revokeToken } from "~/server/youtube.server";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export async function loader({ request }: Route.LoaderArgs) {

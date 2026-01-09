@@ -1,7 +1,7 @@
 import { redirect } from "react-router";
 import type { Route } from "./+types/callback";
-import { requireUserId } from "~/services/auth.server";
-import { getChannelInfo, getTokensFromCode } from "~/services/youtube.server";
+import { requireUserId } from "~/server/auth.server";
+import { getChannelInfo, getTokensFromCode } from "~/server/youtube.server";
 import { db } from "~/db/db.server";
 import { accounts } from "~/db/schema";
 

@@ -1,6 +1,6 @@
 import type { Route } from "./+types/home";
 import { Welcome } from "../welcome/welcome";
-import { redirectIfLoggedIn } from "~/services/auth.server";
+import { redirectIfLoggedIn } from "~/server/auth.server";
 
 export function meta({}: Route.MetaArgs) {
   return [

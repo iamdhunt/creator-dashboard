@@ -1,22 +1,51 @@
-FROM node:20-alpine AS development-dependencies-env
-COPY . /app
-WORKDIR /app
-RUN npm ci
+# 1. Base image
+FROM node:20-alpine AS base
+ENV NODE_ENV=production
 
-FROM node:20-alpine AS production-dependencies-env
-COPY ./package.json package-lock.json /app/
+# 2. Dependencies
+FROM base AS deps
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --include=dev
+
+# 3. Production Dependencies - Install only production dependencies
+FROM base AS production-deps 
+WORKDIR /app
+COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:20-alpine AS build-env
-COPY . /app/
-COPY --from=development-dependencies-env /app/node_modules /app/node_modules
+# 4. Builder - Compile the code
+FROM base AS builder
 WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+# This runs 'react-router build'
 RUN npm run build
 
-FROM node:20-alpine
-COPY ./package.json package-lock.json /app/
-COPY --from=production-dependencies-env /app/node_modules /app/node_modules
-COPY --from=build-env /app/build /app/build
+# 5. Runner - Production image
+FROM base AS runner
 WORKDIR /app
-CMD ["npm", "run", "start"]
+
+# Create a non-root user for security
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 reactrouter
+
+# Copy necessary files
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/build ./build
+# If you have a public folder with static assets, copy it too
+# COPY --from=builder /app/public ./public 
+
+# Switch to non-root user
+USER reactrouter
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Run migrations and start the server
+# Note: In a complex cluster, migrations should be a separate job. 
+# For MVP, running them on start is usually fine.
+CMD ["sh", "-c", "npx drizzle-kit migrate && npm run start"]

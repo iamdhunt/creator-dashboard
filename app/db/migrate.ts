@@ -1,20 +1,16 @@
 import "dotenv/config";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { Client } from "pg";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
 
 async function runMigrate() {
   if (!process.env.DATABASE_URL) {
     throw new Error("DATABASE_URL is not defined");
   }
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-  });
+  const migrationClient = postgres(process.env.DATABASE_URL, { max: 1 });
 
-  await client.connect();
-
-  const db = drizzle(client);
+  const db = drizzle(migrationClient);
 
   console.log("⏳ Running migrations...");
 
@@ -22,7 +18,7 @@ async function runMigrate() {
 
   console.log("✅ Migrations completed!");
 
-  await client.end();
+  await migrationClient.end();
 }
 
 runMigrate().catch((err) => {

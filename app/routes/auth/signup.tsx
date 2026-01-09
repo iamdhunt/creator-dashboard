@@ -1,9 +1,9 @@
 import { Form, Link, useActionData, useNavigation } from "react-router";
 import type { Route } from "./+types/signup";
-import { signup } from "~/services/auth.server";
-import { signupSchema } from "~/services/validation";
+import { signup } from "~/server/auth.server";
+import { signupSchema } from "~/server/validation";
 import { z } from "zod";
-import { redirectIfLoggedIn } from "~/services/auth.server";
+import { redirectIfLoggedIn } from "~/server/auth.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
   await redirectIfLoggedIn(request);

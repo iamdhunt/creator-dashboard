@@ -7,6 +7,7 @@ import {
   real,
   date,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -36,9 +37,7 @@ export const accounts = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
-  (t) => ({
-    unq: unique().on(t.platform, t.platformAccountId),
-  })
+  (t) => [unique().on(t.platform, t.platformAccountId)]
 );
 
 export const posts = pgTable("posts", {
@@ -77,9 +76,22 @@ export const analyticsHistory = pgTable(
     watchMinutes: integer("watch_minutes").default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (t) => ({
-    unq: unique().on(t.accountId, t.date),
-  })
+  (t) => [unique().on(t.accountId, t.date)]
+);
+
+export const apiCache = pgTable(
+  "api_cache",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    accountId: uuid("account_id")
+      .references(() => accounts.id, { onDelete: "cascade" })
+      .notNull(),
+    key: text("key").notNull(),
+    data: jsonb("data").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (t) => [unique().on(t.accountId, t.key)]
 );
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
@@ -91,6 +103,8 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Relations Tables
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
@@ -104,6 +118,7 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
   }),
   posts: many(posts),
   analyticsHistory: many(analyticsHistory),
+  apiCache: many(apiCache),
 }));
 
 export const postsRelations = relations(posts, ({ one }) => ({

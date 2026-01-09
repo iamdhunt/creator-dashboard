@@ -1,13 +1,13 @@
 import { NavLink, Link, Outlet, useLoaderData } from "react-router";
 import type { Route } from "./+types/channel";
-import { requireUserId } from "~/services/auth.server";
+import { requireUserId } from "~/server/auth.server";
 import { db } from "~/db/db.server";
 import { accounts } from "~/db/schema";
 import { eq, and } from "drizzle-orm";
 import {
   getAccountAnalytics,
   getYoutubeDashboardData,
-} from "~/services/analytics.server";
+} from "~/server/analytics.server";
 
 export async function loader({ request, params }: Route.LoaderArgs) {
   const userId = await requireUserId(request);
