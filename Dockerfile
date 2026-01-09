@@ -26,6 +26,9 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
+# Install curl for healthchecks
+RUN apk add --no-cache curl
+
 # Create a non-root user for security
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 reactrouter
