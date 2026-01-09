@@ -1,9 +1,37 @@
 services:
-  app:
-    build: .
+  [APP_NAME]:
+    # build: .
+    image: ghcr.io/YOUR_USERNAME/YOUR_APP:latest
+    # container_name: name
     restart: always
-    ports:
-      - "80:3000"
+    #ports:
+    #  - "80:3000"
+    expose:
+      - "1234"
+    env_file:
+      - fileName
+    networks:
+      - networkName
+
+    healthcheck:
+      test: ["executable", "arg"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+    deploy:
+      mode: replicated
+      replicas: 2 # Starts 2 instances of the app
+      resources:
+        # The "ceiling" before Docker kills the container
+        limits:
+          # cpus: '1.0'
+          memory: 1G
+        # Ensure app always has this much guaranteed starts
+        reservations:
+          cpus: "0.10"
+          memory: 256M
+
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
@@ -13,3 +41,7 @@ services:
       - POSTMARK_API_KEY=${POSTMARK_API_KEY}
       - FROM_EMAIL=${FROM_EMAIL}
       - APP_URL=${APP_URL}
+
+networks:
+  networkName:
+    external: true
