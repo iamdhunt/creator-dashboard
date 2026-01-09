@@ -36,6 +36,12 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
 # If you have a public folder with static assets, copy it too
 # COPY --from=builder /app/public ./public 
+# Copy Drizzle config and SQL migrations
+COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /app/drizzle ./drizzle
+
+# Copy the source code for the migration script
+COPY --from=builder /app/app/db ./app/db
 
 # Switch to non-root user
 USER reactrouter
@@ -48,4 +54,4 @@ ENV HOSTNAME="0.0.0.0"
 # Run migrations and start the server
 # Note: In a complex cluster, migrations should be a separate job. 
 # For MVP, running them on start is usually fine.
-CMD ["sh", "-c", "npx drizzle-kit migrate && npm run start"]
+CMD ["sh", "-c", "npm run db:migrate && npm run start"]
