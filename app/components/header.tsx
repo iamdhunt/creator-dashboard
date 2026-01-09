@@ -11,12 +11,12 @@ export default function Header({ userId }: HeaderProps) {
       <div className="text-5xl font-display">
         <Link to="/">Synqlo</Link>
       </div>
-      <div className="block absolute right-2 transition-all duration-500 ease-out transform hover:-translate-y-3">
+      <div className="block absolute right-2 transition-all duration-500 ease-out transform hover:-translate-y-1.5">
         {userId ? (
           <Form method="post" action="/auth/logout">
             <button
               type="submit"
-              className="px-6 py-2 text-sm uppercase font-bold text-text-inverse text-center hover:cursor-pointer"
+              className="px-6 py-2 text-sm uppercase font-bold text-center hover:cursor-pointer"
             >
               <FontAwesomeIcon
                 icon={["fas", "right-from-bracket"]}
@@ -28,7 +28,7 @@ export default function Header({ userId }: HeaderProps) {
         ) : (
           <Link
             to="/auth/login"
-            className="px-6 py-2 text-sm uppercase font-bold text-text-inverse text-center"
+            className="px-6 py-2 text-sm uppercase font-bold text-center"
           >
             <FontAwesomeIcon
               icon={["far", "user"]}

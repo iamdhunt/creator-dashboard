@@ -32,6 +32,19 @@ services:
           cpus: "0.10"
           memory: 256M
 
+    # Set up auto deploys for github container registry
+    watchtower:
+      image: containrrr/watchtower
+      container_name: watchtower
+      restart: always
+      volumes:
+        # Allows Watchtower to start/stop containers
+        - /var/run/docker.sock:/var/run/docker.sock
+        # Allow Watchtower to read your "Docker login" credentials
+        - path_to_docker_config:/config.json
+      # Check for updates every 60 seconds and remove old images
+      command: --interval 60 --cleanup
+
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
